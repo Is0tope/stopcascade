@@ -1,0 +1,17 @@
+{
+  "name": "stopcascade",
+  "version": "1.0.0",
+  "description": "Simulation for stop cascade on an exchange",
+  "main": "index.js",
+  "repository": "git@github.com:Is0tope/stopcascade.git",
+  "author": "Kris <kris.machowski@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "@datastructures-js/priority-queue": "^5.2.0",
+    "@types/node": "^16.7.10",
+    "typescript": "^4.4.2"
+  },
+  "devDependencies": {
+    "ts-node": "^10.2.1"
+  }
+}
