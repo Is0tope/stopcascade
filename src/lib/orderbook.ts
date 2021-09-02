@@ -79,6 +79,7 @@ export class OrderBook {
                 executions.push(...this.trade(order,oppositeOrder,this.clock.getTime()))
                 if(oppositeOrder.size === 0){
                     oppositeSide.dequeue()
+                    if(oppositeSide.isEmpty()) break
                     oppositeOrder = <Order>oppositeSide.front()
                 }
             }
