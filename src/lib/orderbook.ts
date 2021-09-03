@@ -44,10 +44,11 @@ function orderComparator(a: Order, b: Order): number {
 }
 
 export class OrderBook {
-    private bids = new MaxPriorityQueue({ compare: orderComparator});
-    private asks = new MaxPriorityQueue({ compare: orderComparator});
+    private bids = new MaxPriorityQueue({ compare: orderComparator})
+    private asks = new MaxPriorityQueue({ compare: orderComparator})
     private clock: Clock;
     private _id = 0
+    private tradeSubscribers: ((es: Execution[]) => void)[] = []
 
     constructor(clock: Clock){
         this.clock = clock
@@ -66,21 +67,20 @@ export class OrderBook {
     newOrder(args: NewOrderArgs): Execution[] {
         // Create the order
         const order: Order = {
-            id: this._id,
+            id: this._id++,
             price: args.price || (args.side === Side.Buy ? Infinity : -Infinity),
             size: args.size,
             side: args.side,
             ordType: args.ordType,
             timestamp: this.clock.getTime()
         }
-        this._id++;
         const isBuy = order.side === Side.Buy
         const aggressive = isBuy ? order.price >= this.bestAsk() : order.price <= this.bestBid()
         const executions: Execution[] = []
 
         // If we are aggressive, match against opposite side
-        if(aggressive){
-            const oppositeSide = isBuy ? this.asks : this.bids
+        const oppositeSide = isBuy ? this.asks : this.bids
+        if(aggressive && !oppositeSide.isEmpty()){
             let oppositeOrder = <Order>oppositeSide.front()
             while(  order.size > 0 && 
                     (isBuy ? oppositeOrder.price <= order.price : oppositeOrder.price >= order.price) && 
@@ -105,6 +105,12 @@ export class OrderBook {
             isBuy ? this.bids.enqueue(order) : this.asks.enqueue(order)
         }
         
+        // Publish trades (buy only) to subscribers
+        const trades = executions.filter((e: Execution) => e.side === Side.Buy)
+        this.tradeSubscribers.forEach((fn: (es: Execution[]) => void) => {
+            fn(trades)
+        })
+
         return executions
     }
 
@@ -125,6 +131,8 @@ export class OrderBook {
         })
         agg.size -= qty
         pass.size -= qty
+        // Publish trade to subscribers (only publish the buy)
+        
         return execs
     }
 
@@ -157,5 +165,9 @@ export class OrderBook {
         for(const b of Array.from(bidDict.keys()).sort().reverse()) {
             console.log(`${b}\t${bidDict.get(b)?.toLocaleString()}`)
         }
+    }
+
+    subscribeToTrades(fn: (es: Execution[]) => void) {
+        this.tradeSubscribers.push(fn)
     }
 }
