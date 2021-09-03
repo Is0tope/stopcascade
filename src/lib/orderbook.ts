@@ -6,8 +6,14 @@ export enum Side {
     Sell
 }
 
+export enum OrderType {
+    Limit,
+    Market
+}
+
 export interface Order {
     id: number
+    ordType: OrderType
     price: number
     size: number
     side: Side
@@ -22,9 +28,10 @@ export interface Execution {
 }
 
 export interface NewOrderArgs {
-    price: number
+    price?: number
     size: number
     side: Side
+    ordType: OrderType
 }
 
 function orderComparator(a: Order, b: Order): number {
@@ -57,11 +64,13 @@ export class OrderBook {
     }
 
     newOrder(args: NewOrderArgs): Execution[] {
+        // Create the order
         const order: Order = {
             id: this._id,
-            price: args.price,
+            price: args.price || (args.side === Side.Buy ? Infinity : -Infinity),
             size: args.size,
             side: args.side,
+            ordType: args.ordType,
             timestamp: this.clock.getTime()
         }
         this._id++;
@@ -69,6 +78,7 @@ export class OrderBook {
         const aggressive = isBuy ? order.price >= this.bestAsk() : order.price <= this.bestBid()
         const executions: Execution[] = []
 
+        // If we are aggressive, match against opposite side
         if(aggressive){
             const oppositeSide = isBuy ? this.asks : this.bids
             let oppositeOrder = <Order>oppositeSide.front()
@@ -85,6 +95,12 @@ export class OrderBook {
             }
         }
 
+        // If this is a market order, cancel any remaining quanity (if any)
+        if(order.ordType === OrderType.Market && order.size > 0) {
+            order.size = 0
+        }
+
+        // If any quantity remaining, put the remainder in passively
         if(order.size > 0){
             isBuy ? this.bids.enqueue(order) : this.asks.enqueue(order)
         }
