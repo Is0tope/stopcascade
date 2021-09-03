@@ -61,9 +61,9 @@ export class OHLCTracker implements OpenHighLowCloseTracker {
 
     private rollCandle(time: number) {
         const c = this.getCurrentCandle()
-        if(time > c.timestamp){
+        for(let t = c.timestamp + this.bucket; t <= time; t += this.bucket){
             this.candles.push({
-                timestamp: time,
+                timestamp: t,
                 open: c.close,
                 high: c.close,
                 low: c.close,

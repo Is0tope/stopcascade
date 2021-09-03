@@ -4,15 +4,21 @@ import { PseudoRandomNumberGenerator } from "./prng";
 export class MarketMaker {
     private book: OrderBook
     private prng: PseudoRandomNumberGenerator
-    private markPrice = 1000 // TODO: Make this changeable?
-    private minSize = 500
-    private maxSize = 1000
-    private maxAggress = 0.01
+    private markPrice: number
+    private minSize: number
+    private maxSize: number
+    private maxAggress: number
     private tickSize = 1
+    private rate: number
 
-    constructor(book: OrderBook, prng: PseudoRandomNumberGenerator) {
-        this.book = book;
+    constructor(book: OrderBook, prng: PseudoRandomNumberGenerator, orderSize: number, aggression: number, rate: number, markPrice: number) {
+        this.book = book
         this.prng = prng
+        this.maxSize = orderSize
+        this.minSize = Math.floor(orderSize/2)
+        this.maxAggress = aggression
+        this.rate = rate
+        this.markPrice = markPrice
     }
 
     roundToTick(price: number){
@@ -20,9 +26,11 @@ export class MarketMaker {
     }
 
     tick() {
-        this.placeRandomOrder(Side.Buy)
-        this.placeRandomOrder(Side.Sell)
+        for(let i = 0; i < this.rate; i++){
+            this.placeRandomOrder(this.prng.random() >= 0.5 ? Side.Buy : Side.Sell)
+        }
     }
+    
 
     placeRandomOrder(side: Side) {
         const qty = this.minSize + Math.floor(this.prng.random()*(this.maxSize-this.minSize))
