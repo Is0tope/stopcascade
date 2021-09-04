@@ -1,6 +1,8 @@
 import * as d3 from "d3";
 import { Candle } from "./ohlc";
+import { Side } from "./orderbook";
 import { Simulation } from "./simulation";
+import { StopOrder } from "./stopworker";
 
 export class StopCascadeVisualiser {
     // Simulation object
@@ -20,10 +22,19 @@ export class StopCascadeVisualiser {
 
     // Book Dimensions
     private bookMargin = 10
+    private bookOffset = this.chartWidth
     private bookWidth = 100
     private bookHeight = 600
     private innerBookWidth = this.bookWidth - 2 * this.bookMargin
     private innerBookHeight = this.bookHeight - 2 * this.chartMargin
+
+    // Stops Dimensions
+    private stopsMargin = 10
+    private stopsOffset = this.bookOffset + this.bookWidth
+    private stopsWidth = 100
+    private stopsHeight = 600
+    private innerStopsWidth = this.stopsWidth - 2 * this.stopsMargin
+    private innerStopsHeight = this.stopsHeight - 2 * this.chartMargin
 
     // Scales
     private xScale = d3.scaleLinear().range([0, this.innerChartWidth]).domain([0, 30_000]);
@@ -37,6 +48,7 @@ export class StopCascadeVisualiser {
     private gClip: any
     private gOHLC: any
     private gBook: any
+    private gStops: any
 
     // Chart
     private gXAxis: any
@@ -81,7 +93,7 @@ export class StopCascadeVisualiser {
             .extent([[0, 0], [this.containerWidth, this.containerHeight]])
             .translateExtent([[0, 0], [Infinity, this.containerHeight]])
             .on('zoom', (e: any) => {
-                // Only deal with x axis
+                // Only deal with x axis for now
                 this.gZoom.attr('transform', `translate(${e.transform.x},0)`);
                 this.gXAxis.call(this.xAxis.scale(e.transform.rescaleX(this.xScale)));
             });
@@ -92,7 +104,7 @@ export class StopCascadeVisualiser {
 
         // L2 Book
         this.gBook = this.svg.append('g')
-        this.gBook.attr('transform', `translate(${this.chartWidth + this.bookMargin},${this.chartMargin})`)
+        this.gBook.attr('transform', `translate(${this.bookOffset},${this.chartMargin})`)
         this.gBook.append('rect')
             .attr('stroke','black')
             .attr('stroke-width',1)
@@ -102,6 +114,28 @@ export class StopCascadeVisualiser {
             .attr('height',this.innerBookHeight)
             .attr('fill','none')
 
+        // Stops
+        this.gStops = this.svg.append('g')
+        this.gStops.attr('transform', `translate(${this.stopsOffset},${this.chartMargin})`)
+        this.gStops.append('rect')
+            .attr('stroke','black')
+            .attr('stroke-width',1)
+            .attr('x',0)
+            .attr('y',0)
+            .attr('width',this.innerStopsWidth)
+            .attr('height',this.innerStopsHeight)
+            .attr('fill','white')
+            .on('click',(e: any) => {
+                const rect = e.target.getBoundingClientRect()
+                console.log(rect)
+                console.log(e)
+                const y = e.pageY - (rect.y + window.scrollY)
+                const price = 10*Math.floor(this.yScale.invert(y)/10)
+                this.simulation.addStopOrder({
+                    side: price < this.simulation.getMarkPrice() ? Side.Sell : Side.Buy,
+                    stopPrice: price
+                })
+            })
     }
 
     private updateOHLC() {
@@ -176,8 +210,27 @@ export class StopCascadeVisualiser {
             .attr('width',(x: number) => bookScale(askDict.get(x)!))
     }
 
+    updateStops() {
+        const inactiveData = this.simulation.getInactiveStops()
+
+        let inactive = this.gStops
+            .selectAll('.inactive')
+            .data(inactiveData)
+        inactive.exit().remove() // TODO: Animate this somehow
+        inactive.enter()
+            .append('rect')
+            .attr('class','inactive')
+            .attr('fill','black')
+            .merge(inactive)
+            .attr('x',0)
+            .attr('y',(x: StopOrder) => this.yScale(x.stopPrice))
+            .attr('height',this.yScale(0)-this.yScale(10))
+            .attr('width',this.innerBookWidth)
+    }
+
     update() {
         this.updateOHLC()
         this.updateBook()
+        this.updateStops()
     }
 }

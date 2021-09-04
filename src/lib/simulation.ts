@@ -3,7 +3,7 @@ import { MarketMaker } from "./marketmaker"
 import { Candle, OHLCTracker } from "./ohlc"
 import { Execution, OrderBook, OrderType } from "./orderbook"
 import { AleaPRNG, PseudoRandomNumberGenerator } from "./prng"
-import { StopWorker } from "./stopworker"
+import { NewStopOrderArgs, StopOrder, StopWorker } from "./stopworker"
 
 export interface NewSimulationArgs {
     seed?: string
@@ -73,5 +73,17 @@ export class Simulation {
 
     getAskL2(): Map<number,number> {
         return this.book.getAskL2()
+    }
+
+    getInactiveStops(): StopOrder[] {
+        return this.stops.getInactiveStops()
+    }
+
+    addStopOrder(order: NewStopOrderArgs){
+        this.stops.newStopOrder(order)
+    }
+
+    getMarkPrice(): number {
+        return this.markPrice
     }
 }

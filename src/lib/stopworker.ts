@@ -16,7 +16,7 @@ export interface NewStopOrderArgs {
     side: Side
 }
 
-interface StopOrder {
+export interface StopOrder {
     id: number
     side: Side
     stopPrice: number
@@ -33,7 +33,7 @@ export class StopWorker {
     private inactiveSells = new MaxPriorityQueue({ compare: stopOrderComparator})
     private activatedOrders: StopOrder[] = []
     private activationRate: number
-    private defaultSize = 2000
+    private defaultSize = 8000
 
     constructor(clock: Clock, book: OrderBook, activationRate: number) {
         this.clock = clock
@@ -50,6 +50,7 @@ export class StopWorker {
             timestamp: this.clock.getTime()
         }
         order.side === Side.Buy ? this.inactiveBuys.enqueue(order) : this.inactiveSells.enqueue(order)
+        console.log(`Added stop: ${Side[args.side]} ${args.stopPrice}`)
     }
 
     trigger(price: number) {
@@ -82,5 +83,9 @@ export class StopWorker {
                 size: o.size
             })
         }
+    }
+
+    getInactiveStops(): StopOrder[] {
+        return <StopOrder[]>[...this.inactiveBuys.toArray(),...this.inactiveSells.toArray()]
     }
 }
