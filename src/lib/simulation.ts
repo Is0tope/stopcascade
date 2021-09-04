@@ -1,6 +1,6 @@
 import { Clock, StepClock, UTCClock } from "./clock"
 import { MarketMaker } from "./marketmaker"
-import { OHLCTracker } from "./ohlc"
+import { Candle, OHLCTracker } from "./ohlc"
 import { Execution, OrderBook, OrderType } from "./orderbook"
 import { AleaPRNG, PseudoRandomNumberGenerator } from "./prng"
 import { StopWorker } from "./stopworker"
@@ -60,6 +60,10 @@ export class Simulation {
         this.ohlc.tick(this.clock.getTime())
         // console.log('========')
         // this.book.printL2()
-        // this.ohlc.print()
+        this.ohlc.print()
+    }
+
+    getOHLC(): Candle[] {
+        return this.ohlc.getCandles()
     }
 }

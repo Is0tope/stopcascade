@@ -8,7 +8,7 @@ export class MarketMaker {
     private minSize: number
     private maxSize: number
     private maxAggress: number
-    private tickSize = 1
+    private tickSize = 10
     private rate: number
 
     constructor(book: OrderBook, prng: PseudoRandomNumberGenerator, orderSize: number, aggression: number, rate: number, markPrice: number) {

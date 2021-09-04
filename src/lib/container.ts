@@ -20,6 +20,7 @@ export class StopCascadeWebContainer {
         this.timer = setInterval(() => {
             this.clock.tick()
             this.simulation.tick()
+            this.visualiser.update()
         },args.tickRate)
         this.visualiser = new StopCascadeVisualiser(this.simulation,args.target)
     }
