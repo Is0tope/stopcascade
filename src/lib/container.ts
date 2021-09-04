@@ -17,6 +17,6 @@ export class StopCascadeWebContainer {
         },args.tickRate)
         this.target = <HTMLElement>document.getElementById(args.target)
         console.log(this.target)
-        this.target.textContent = 'bound'
+        this.target.textContent = 'bound to container'
     }
 }

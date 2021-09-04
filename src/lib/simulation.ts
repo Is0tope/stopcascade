@@ -58,7 +58,7 @@ export class Simulation {
         this.stops.activate()
         this.ohlc.tick(this.clock.getTime())
         console.log('========')
-        // this.book.printL2()
-        this.ohlc.print()
+        this.book.printL2()
+        // this.ohlc.print()
     }
 }
