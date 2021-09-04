@@ -1,7 +1,3 @@
-import { Simulation } from './lib/simulation'
+import { StopCascadeWebContainer } from './lib/container'
 
-const simulation = new Simulation({})
-
-setInterval(() => {
-    simulation.tick()
-},100)
+export default StopCascadeWebContainer
