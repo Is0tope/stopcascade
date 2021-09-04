@@ -131,8 +131,6 @@ export class OrderBook {
         })
         agg.size -= qty
         pass.size -= qty
-        // Publish trade to subscribers (only publish the buy)
-        
         return execs
     }
 

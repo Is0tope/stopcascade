@@ -1,4 +1,4 @@
-import { Clock, UTCClock } from "./clock"
+import { Clock, StepClock, UTCClock } from "./clock"
 import { MarketMaker } from "./marketmaker"
 import { OHLCTracker } from "./ohlc"
 import { Execution, OrderBook, OrderType } from "./orderbook"
@@ -9,6 +9,7 @@ export interface NewSimulationArgs {
     seed?: string
     candleWidth?: number
     markPrice?: number
+    clock?: Clock
     stopActivationRate?: number
     marketMakerOrderSize?: number
     marketMakerOrderRate?: number
@@ -37,7 +38,7 @@ export class Simulation {
         this.marketMakerOrderRate = args.marketMakerOrderRate || 2
         this.marketMakerAggression = args.marketMakerAggression || 0.01
 
-        this.clock = new UTCClock()
+        this.clock = args.clock === undefined ? new UTCClock() : args.clock
         this.book = new OrderBook(this.clock)
         this.prng = new AleaPRNG(args.seed || '1337')
         this.marketMaker = new MarketMaker(this.book,this.prng,this.marketMakerOrderSize,this.marketMakerAggression,this.marketMakerOrderRate,this.markPrice)
@@ -57,8 +58,8 @@ export class Simulation {
         this.marketMaker.tick()
         this.stops.activate()
         this.ohlc.tick(this.clock.getTime())
-        console.log('========')
-        this.book.printL2()
+        // console.log('========')
+        // this.book.printL2()
         // this.ohlc.print()
     }
 }
