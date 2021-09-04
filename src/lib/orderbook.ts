@@ -143,19 +143,29 @@ export class OrderBook {
         }
     }
 
-    printL2() {
+    getBidL2(): Map<number,number> {
         const bidDict = new Map<number,number>()
         for(let o of this.bids.toArray()){
             o = <Order>o
             let size = bidDict.has(o.price) ? bidDict.get(o.price)! + o.size : o.size
             bidDict.set(o.price,size)
         }
+        return bidDict
+    }
+
+    getAskL2(): Map<number,number> {
         const askDict = new Map<number,number>()
         for(let o of this.asks.toArray()){
             o = <Order>o
             let size = askDict.has(o.price) ? askDict.get(o.price)! + o.size : o.size
             askDict.set(o.price,size)
         }
+        return askDict
+    }
+
+    printL2() {
+        const bidDict = this.getBidL2()
+        const askDict = this.getAskL2()
         for(const a of Array.from(askDict.keys()).sort().reverse()) {
             console.log(`${a}\t${askDict.get(a)?.toLocaleString()}`)
         }

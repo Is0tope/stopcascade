@@ -60,10 +60,18 @@ export class Simulation {
         this.ohlc.tick(this.clock.getTime())
         // console.log('========')
         // this.book.printL2()
-        this.ohlc.print()
+        // this.ohlc.print()
     }
 
     getOHLC(): Candle[] {
         return this.ohlc.getCandles()
+    }
+
+    getBidL2(): Map<number,number> {
+        return this.book.getBidL2()
+    }
+
+    getAskL2(): Map<number,number> {
+        return this.book.getAskL2()
     }
 }

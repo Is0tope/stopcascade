@@ -29,33 +29,78 @@ export class StopCascadeVisualiser {
     private xScale = d3.scaleLinear().range([0, this.innerChartWidth]).domain([0, 30_000]);
     private yScale = d3.scaleLinear().range([this.innerChartHeight, 0]).domain([0, 2000]);
 
-    // Elements
+    // Group Elements
     private rootElement: d3.Selection<any,any,any,any>
     private svg: d3.Selection<any,any,any,any>
     private gAxes: d3.Selection<any,any,any,any>
+    private gZoom: any
+    private gClip: any
     private gOHLC: any
     private gBook: any
+
+    // Chart
+    private gXAxis: any
+    private gYAxis: any
+    private xAxis: d3.Axis<d3.NumberValue>
+    private yAxis: d3.Axis<d3.NumberValue>
 
     constructor(sim: Simulation, rootElement: string) {
         this.simulation = sim
         this.rootElement = d3.select('#' + rootElement)
-        this.svg = this.rootElement.append('svg')
 
+        // Root SVG
+        this.svg = this.rootElement.append('svg')
         this.svg.attr('width',this.containerWidth).attr('height',this.containerHeight).attr('viewbox',`0 0 ${this.containerWidth} ${this.containerHeight}`)
 
+        // Chart axes
         this.gAxes = this.svg.append('g')
         this.gAxes.attr('transform', `translate(${this.chartMargin},${this.chartMargin})`)
-        this.gAxes.append('g')
+        this.xAxis = d3.axisBottom(this.xScale)
+        this.gXAxis = this.gAxes.append('g')
             .attr('transform', `translate(0,${this.innerChartHeight})`)
-            .call(d3.axisBottom(this.xScale));
-        this.gAxes.append('g')
+            .call(this.xAxis);
+        this.yAxis = d3.axisLeft(this.yScale)
+        this.gYAxis = this.gAxes.append('g')
             .attr('transform', `translate(0,0)`)
-            .call(d3.axisLeft(this.yScale));
+            .call(this.yAxis);
 
-        this.gOHLC = this.gAxes.append('g')
+        // Axes Clip Path
+        this.svg.append('defs').append('clipPath')
+            .attr('id', 'clip')
+            .append('rect')
+            .attr('width', this.innerChartWidth)
+            .attr('height', this.innerChartHeight)
+            .attr('x', 0)
+            .attr('y', 0)
 
+        // Zoom
+        this.gClip = this.gAxes.append('g').attr('clip-path', 'url(#clip)')
+        this.gZoom = this.gClip.append('g')
+        var zoom = d3.zoom()
+            .scaleExtent([1, 1])
+            .extent([[0, 0], [this.containerWidth, this.containerHeight]])
+            .translateExtent([[0, 0], [Infinity, this.containerHeight]])
+            .on('zoom', (e: any) => {
+                // Only deal with x axis
+                this.gZoom.attr('transform', `translate(${e.transform.x},0)`);
+                this.gXAxis.call(this.xAxis.scale(e.transform.rescaleX(this.xScale)));
+            });
+        this.svg.call(zoom)
+        
+        // OHLC
+        this.gOHLC = this.gZoom.append('g')
+
+        // L2 Book
         this.gBook = this.svg.append('g')
         this.gBook.attr('transform', `translate(${this.chartWidth + this.bookMargin},${this.chartMargin})`)
+        this.gBook.append('rect')
+            .attr('stroke','black')
+            .attr('stroke-width',1)
+            .attr('x',0)
+            .attr('y',0)
+            .attr('width',this.innerBookWidth)
+            .attr('height',this.innerBookHeight)
+            .attr('fill','none')
 
     }
 
@@ -66,14 +111,13 @@ export class StopCascadeVisualiser {
 
         lines.enter()
             .append('line')
-            .attr("stroke", "black")
-            .attr("stroke-width", 1.5)
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1.5)
             .merge(lines)
             .attr('x1',(c: Candle) => this.xScale(c.timestamp))
             .attr('x2',(c: Candle) => this.xScale(c.timestamp))
             .attr('y1',(c: Candle) => this.yScale(c.high))
             .attr('y2',(c: Candle) => this.yScale(c.low))
-
 
         let bars = this.gOHLC
             .selectAll('rect')
@@ -81,8 +125,8 @@ export class StopCascadeVisualiser {
 
         bars.enter()
             .append('rect')
-            .attr("stroke", "black")
-            .attr("stroke-width", 1.5)
+            .attr('stroke', 'black')
+            .attr('stroke-width', 1.5)
             .merge(bars)
             .attr('x',(c: Candle) => this.xScale(c.timestamp - this.candleWidth/2))
             .attr('y',(c: Candle) => this.yScale(Math.max(c.open,c.close)))
@@ -92,7 +136,48 @@ export class StopCascadeVisualiser {
             .attr('fill',(c: Candle) => c.close-c.open > 0 ? '#4aa163' : '#d16547')
     }
 
+    private updateBook() {
+        const bidDict = this.simulation.getBidL2()
+        const askDict = this.simulation.getAskL2()
+
+        // Figure out the maximum volume to scale
+        let maxVolume = 1
+        for(const v of [...Array.from(bidDict.values()),...Array.from(askDict.values())]){
+            maxVolume = Math.max(maxVolume,v)
+        }
+        let bookScale = d3.scaleLinear([0,this.innerBookWidth * 0.95]).domain([0,maxVolume])
+
+        let bids = this.gBook
+            .selectAll('.bid')
+            .data(Array.from(bidDict.keys()))
+        bids.exit().remove()
+        bids.enter()
+            .append('rect')
+            .attr('class','bid')
+            .attr('fill','#6ba27b')
+            .merge(bids)
+            .attr('x',0)
+            .attr('y',(x: number) => this.yScale(x))
+            .attr('height',(x: number) => this.yScale(0)-this.yScale(10))
+            .attr('width',(x: number) => bookScale(bidDict.get(x)!))
+
+        let asks = this.gBook
+            .selectAll('.ask')
+            .data(Array.from(askDict.keys()))
+        asks.exit().remove()
+        asks.enter()
+            .append('rect')
+            .attr('class','ask')
+            .attr('fill','#d6846d')
+            .merge(asks)
+            .attr('x',0)
+            .attr('y',(x: number) => this.yScale(x))
+            .attr('height',(x: number) => this.yScale(0)-this.yScale(10))
+            .attr('width',(x: number) => bookScale(askDict.get(x)!))
+    }
+
     update() {
         this.updateOHLC()
+        this.updateBook()
     }
 }
