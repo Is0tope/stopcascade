@@ -56,6 +56,10 @@ export class StopCascadeVisualiser {
     private gYAxis: any
     private xAxis: d3.Axis<d3.NumberValue>
     private yAxis: d3.Axis<d3.NumberValue>
+    private chartZoom: d3.ZoomBehavior<Element,unknown>
+    private onZoom: Function
+    private moveTolerance = 4_000
+    private currentZoom: d3.ZoomTransform = d3.zoomIdentity
 
     constructor(sim: Simulation, rootElement: string) {
         this.simulation = sim
@@ -91,18 +95,23 @@ export class StopCascadeVisualiser {
             .attr('y', 0)
 
         // Zoom
+        this.onZoom = (transform: any) => {
+            // Only deal with x axis for now
+            console.log(transform)
+            this.currentZoom = transform
+            this.gZoom.attr('transform', `translate(${transform.x},0)`);
+            this.gXAxis.call(this.xAxis.scale(transform.rescaleX(this.xScale)));
+        }
         this.gClip = this.gAxes.append('g').attr('clip-path', 'url(#clip)')
         this.gZoom = this.gClip.append('g')
-        const zoom = d3.zoom()
+        this.chartZoom = d3.zoom()
             .scaleExtent([1, 1])
             .extent([[0, 0], [this.containerWidth, this.containerHeight]])
             .translateExtent([[0, 0], [Infinity, this.containerHeight]])
             .on('zoom', (e: any) => {
-                // Only deal with x axis for now
-                this.gZoom.attr('transform', `translate(${e.transform.x},0)`);
-                this.gXAxis.call(this.xAxis.scale(e.transform.rescaleX(this.xScale)));
+                this.onZoom(e.transform)
             });
-        this.svg.call(zoom)
+        this.svg.call(this.chartZoom)
         
         // OHLC
         this.gOHLC = this.gZoom.append('g')
@@ -183,6 +192,17 @@ export class StopCascadeVisualiser {
             // Hacky, but need a minimum width to be there to show line for empty candles
             .attr('height',(c: Candle) => Math.max(1,Math.abs(this.yScale(c.open)-this.yScale(c.close))))
             .attr('fill',(c: Candle) => c.close-c.open > 0 ? '#4aa163' : '#d16547')
+
+        // Check to see if we need to move the chart
+        const lastCandleTimestamp = this.simulation.getCurrentCandle().timestamp
+        const rightmostTimestamp = <number>this.xAxis.scale().domain()[1]
+        if(lastCandleTimestamp > rightmostTimestamp - this.moveTolerance) {
+            console.log('move tolerance exceeded')
+            const transform = this.currentZoom.translate(this.xScale(-1000),0)
+            console.log(transform)
+            this.onZoom(transform)
+        }
+
     }
 
     private updateBook() {

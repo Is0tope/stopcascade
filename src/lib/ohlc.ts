@@ -16,8 +16,8 @@ export interface OpenHighLowCloseTracker {
 }
 
 export class OHLCTracker implements OpenHighLowCloseTracker {
-    private candles: Candle[] = [];
-    private bucket: number;
+    private candles: Candle[] = []
+    private bucket: number
 
     constructor(time: number, bucket: number, initialPrice: number){
         this.bucket = bucket
@@ -31,7 +31,7 @@ export class OHLCTracker implements OpenHighLowCloseTracker {
     }
 
     private roundToBucket(time: number){
-        return time - (time % this.bucket);
+        return time - (time % this.bucket)
     }
 
     getCurrentCandle(): Candle {

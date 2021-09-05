@@ -30,6 +30,7 @@ export class Simulation {
     private tickSize: number
     private maxPrice: number
     private minPrice: number
+    private candleWidth: number
 
     private clock: Clock
     private book: OrderBook
@@ -47,6 +48,7 @@ export class Simulation {
         this.tickSize = args.tickSize || 10
         this.maxPrice = args.maxPrice || 2000
         this.minPrice = args.minPrice || 0
+        this.candleWidth = args.candleWidth || 1000
 
         this.clock = args.clock === undefined ? new UTCClock() : args.clock
         this.book = new OrderBook(this.clock)
@@ -62,7 +64,7 @@ export class Simulation {
             minPrice: this.minPrice,
             tickSize: this.tickSize
         })
-        this.ohlc = new OHLCTracker(this.clock.getTime(),args.candleWidth || 1000,this.markPrice)
+        this.ohlc = new OHLCTracker(this.clock.getTime(),this.candleWidth,this.markPrice)
         this.stops = new StopWorker(this.clock,this.book,this.stopActivationRate,args.audioPath || 'audio')
 
         // Subscribe to trades
@@ -121,5 +123,9 @@ export class Simulation {
 
     getLastPrice(): number {
         return this.ohlc.getLastPrice()
+    }
+
+    getCurrentCandle(): Candle {
+        return this.ohlc.getCurrentCandle()
     }
 }

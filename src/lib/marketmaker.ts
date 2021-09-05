@@ -27,7 +27,9 @@ export class MarketMaker {
     private tickSize: number
     private lastPrice: number
 
-    private markPriceFavour = 0.5
+    private markPriceFavour = 0.9
+    private distributionAlpha = 8
+    private distributionBeta = 1.005
 
     constructor(args: NewMarketMakerArgs) {
         this.book = args.book
@@ -57,11 +59,21 @@ export class MarketMaker {
         return floorToTick(this.tickSize,(this.markPriceFavour*this.markPrice) + ((1-this.markPriceFavour)*this.lastPrice))
     }
 
-    placeRandomOrder(side: Side) {
-        const qty = this.minSize + Math.floor(this.prng.random()*(this.maxSize-this.minSize))
-        let price = floorToTick(this.tickSize,(this.getRefPrice()*(1-this.maxAggress)) + (this.prng.random()*(2*this.maxAggress*this.getRefPrice())))
+    private getOrderPrice(side: Side): number{
+        const rng = this.prng.beta(this.distributionAlpha,this.distributionBeta)
+        const expectation = this.distributionAlpha/(this.distributionAlpha+this.distributionBeta)
+        const aggression = rng - expectation
+        const refPrice = this.getRefPrice()
+        let price = side === Side.Buy ? refPrice*(1+aggression) : refPrice*(1-aggression)
+        price = floorToTick(this.tickSize,price)
         price = Math.min(price,this.maxPrice)
         price = Math.max(price,this.minPrice)
+        return price
+    }
+
+    placeRandomOrder(side: Side) {
+        const qty = this.minSize + Math.floor(this.prng.random()*(this.maxSize-this.minSize))
+        let price = this.getOrderPrice(side)
         
         this.book.newOrder({
             price: price,
