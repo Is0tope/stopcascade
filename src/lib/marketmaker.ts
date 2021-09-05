@@ -59,7 +59,7 @@ export class MarketMaker {
 
     placeRandomOrder(side: Side) {
         const qty = this.minSize + Math.floor(this.prng.random()*(this.maxSize-this.minSize))
-        let price = floorToTick(this.tickSize,(this.markPrice*(1-this.maxAggress)) + (this.prng.random()*(2*this.maxAggress*this.markPrice)))
+        let price = floorToTick(this.tickSize,(this.getRefPrice()*(1-this.maxAggress)) + (this.prng.random()*(2*this.maxAggress*this.getRefPrice())))
         price = Math.min(price,this.maxPrice)
         price = Math.max(price,this.minPrice)
         
