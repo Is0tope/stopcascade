@@ -1,4 +1,4 @@
-import { OrderBook, OrderType, Side } from "./orderbook";
+import { Execution, OrderBook, OrderType, Side } from "./orderbook";
 import { PseudoRandomNumberGenerator } from "./prng";
 import { floorToTick } from "./util";
 
@@ -25,6 +25,9 @@ export class MarketMaker {
     private minPrice: number
     private maxPrice: number
     private tickSize: number
+    private lastPrice: number
+
+    private markPriceFavour = 0.5
 
     constructor(args: NewMarketMakerArgs) {
         this.book = args.book
@@ -34,6 +37,7 @@ export class MarketMaker {
         this.maxAggress = args.aggression
         this.rate = args.rate
         this.markPrice = args.markPrice
+        this.lastPrice = args.markPrice
         this.minPrice = args.minPrice
         this.maxPrice = args.maxPrice
         this.tickSize = args.tickSize
@@ -44,7 +48,14 @@ export class MarketMaker {
             this.placeRandomOrder(this.prng.random() >= 0.5 ? Side.Buy : Side.Sell)
         }
     }
-    
+
+    onTrades(trades: Execution[]) {
+        this.lastPrice = trades[trades.length - 1].lastPrice
+    }
+
+    private getRefPrice() {
+        return floorToTick(this.tickSize,(this.markPriceFavour*this.markPrice) + ((1-this.markPriceFavour)*this.lastPrice))
+    }
 
     placeRandomOrder(side: Side) {
         const qty = this.minSize + Math.floor(this.prng.random()*(this.maxSize-this.minSize))

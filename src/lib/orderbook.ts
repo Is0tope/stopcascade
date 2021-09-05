@@ -107,9 +107,11 @@ export class OrderBook {
         
         // Publish trades (buy only) to subscribers
         const trades = executions.filter((e: Execution) => e.side === Side.Buy)
-        this.tradeSubscribers.forEach((fn: (es: Execution[]) => void) => {
-            fn(trades)
-        })
+        if(trades.length > 0){
+            this.tradeSubscribers.forEach((fn: (es: Execution[]) => void) => {
+                fn(trades)
+            })
+        }
 
         return executions
     }

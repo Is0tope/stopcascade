@@ -72,6 +72,9 @@ export class Simulation {
         this.book.subscribeToTrades((es: Execution[]) => {
             es.forEach((e: Execution) => this.stops.trigger(e.lastPrice))
         })
+        this.book.subscribeToTrades((es: Execution[]) => {
+            this.marketMaker.onTrades(es)
+        })
     }
 
     tick() {
