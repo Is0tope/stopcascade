@@ -1,5 +1,18 @@
 import { OrderBook, OrderType, Side } from "./orderbook";
 import { PseudoRandomNumberGenerator } from "./prng";
+import { floorToTick } from "./util";
+
+export interface NewMarketMakerArgs {
+    book: OrderBook
+    prng: PseudoRandomNumberGenerator
+    orderSize: number
+    aggression: number
+    rate: number
+    markPrice: number
+    minPrice: number
+    maxPrice: number
+    tickSize: number
+}
 
 export class MarketMaker {
     private book: OrderBook
@@ -8,21 +21,22 @@ export class MarketMaker {
     private minSize: number
     private maxSize: number
     private maxAggress: number
-    private tickSize = 10
     private rate: number
+    private minPrice: number
+    private maxPrice: number
+    private tickSize: number
 
-    constructor(book: OrderBook, prng: PseudoRandomNumberGenerator, orderSize: number, aggression: number, rate: number, markPrice: number) {
-        this.book = book
-        this.prng = prng
-        this.maxSize = orderSize
-        this.minSize = Math.floor(orderSize/2)
-        this.maxAggress = aggression
-        this.rate = rate
-        this.markPrice = markPrice
-    }
-
-    roundToTick(price: number){
-        return this.tickSize*Math.floor(price/this.tickSize)
+    constructor(args: NewMarketMakerArgs) {
+        this.book = args.book
+        this.prng = args.prng
+        this.maxSize = args.orderSize
+        this.minSize = Math.floor(args.orderSize/2)
+        this.maxAggress = args.aggression
+        this.rate = args.rate
+        this.markPrice = args.markPrice
+        this.minPrice = args.minPrice
+        this.maxPrice = args.maxPrice
+        this.tickSize = args.tickSize
     }
 
     tick() {
@@ -34,7 +48,10 @@ export class MarketMaker {
 
     placeRandomOrder(side: Side) {
         const qty = this.minSize + Math.floor(this.prng.random()*(this.maxSize-this.minSize))
-        const price = this.roundToTick((this.markPrice*(1-this.maxAggress)) + (this.prng.random()*(2*this.maxAggress*this.markPrice)))
+        let price = floorToTick(this.tickSize,(this.markPrice*(1-this.maxAggress)) + (this.prng.random()*(2*this.maxAggress*this.markPrice)))
+        price = Math.min(price,this.maxPrice)
+        price = Math.max(price,this.minPrice)
+        
         this.book.newOrder({
             price: price,
             side: side,

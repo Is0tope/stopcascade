@@ -8,12 +8,16 @@ import { NewStopOrderArgs, StopOrder, StopWorker } from "./stopworker"
 export interface NewSimulationArgs {
     seed?: string
     candleWidth?: number
-    markPrice?: number
     clock?: Clock
     stopActivationRate?: number
     marketMakerOrderSize?: number
     marketMakerOrderRate?: number
     marketMakerAggression?: number
+    markPrice: number
+    tickSize?: number
+    maxPrice?: number
+    minPrice?: number
+    audioPath?: string
 }
 
 export class Simulation {
@@ -23,6 +27,9 @@ export class Simulation {
     private marketMakerOrderSize: number
     private marketMakerOrderRate: number
     private marketMakerAggression: number
+    private tickSize: number
+    private maxPrice: number
+    private minPrice: number
 
     private clock: Clock
     private book: OrderBook
@@ -37,13 +44,26 @@ export class Simulation {
         this.marketMakerOrderSize = args.marketMakerOrderSize || 1000
         this.marketMakerOrderRate = args.marketMakerOrderRate || 2
         this.marketMakerAggression = args.marketMakerAggression || 0.01
+        this.tickSize = args.tickSize || 10
+        this.maxPrice = args.maxPrice || 2000
+        this.minPrice = args.minPrice || 0
 
         this.clock = args.clock === undefined ? new UTCClock() : args.clock
         this.book = new OrderBook(this.clock)
         this.prng = new AleaPRNG(args.seed || '1337')
-        this.marketMaker = new MarketMaker(this.book,this.prng,this.marketMakerOrderSize,this.marketMakerAggression,this.marketMakerOrderRate,this.markPrice)
+        this.marketMaker = new MarketMaker({
+            book: this.book,
+            prng: this.prng,
+            orderSize: this.marketMakerOrderSize,
+            aggression: this.marketMakerAggression,
+            rate: this.marketMakerOrderRate,
+            markPrice:this.markPrice,
+            maxPrice: this.maxPrice,
+            minPrice: this.minPrice,
+            tickSize: this.tickSize
+        })
         this.ohlc = new OHLCTracker(this.clock.getTime(),args.candleWidth || 1000,this.markPrice)
-        this.stops = new StopWorker(this.clock,this.book,this.stopActivationRate)
+        this.stops = new StopWorker(this.clock,this.book,this.stopActivationRate,args.audioPath || 'audio')
 
         // Subscribe to trades
         this.book.subscribeToTrades((es: Execution[]) => {
@@ -58,9 +78,6 @@ export class Simulation {
         this.marketMaker.tick()
         this.stops.activate()
         this.ohlc.tick(this.clock.getTime())
-        // console.log('========')
-        // this.book.printL2()
-        // this.ohlc.print()
     }
 
     getOHLC(): Candle[] {
@@ -79,11 +96,27 @@ export class Simulation {
         return this.stops.getInactiveStops()
     }
 
+    getActivatedStops(): StopOrder[] {
+        return this.stops.getActivatedStops()
+    }
+
     addStopOrder(order: NewStopOrderArgs){
         this.stops.newStopOrder(order)
     }
 
     getMarkPrice(): number {
         return this.markPrice
+    }
+
+    getMinPrice(): number {
+        return this.minPrice
+    }
+
+    getMaxPrice(): number {
+        return this.maxPrice
+    }
+
+    getLastPrice(): number {
+        return this.ohlc.getLastPrice()
     }
 }

@@ -37,8 +37,9 @@ export class StopCascadeVisualiser {
     private innerStopsHeight = this.stopsHeight - 2 * this.chartMargin
 
     // Scales
-    private xScale = d3.scaleLinear().range([0, this.innerChartWidth]).domain([0, 30_000]);
-    private yScale = d3.scaleLinear().range([this.innerChartHeight, 0]).domain([0, 2000]);
+    private maxMsWidth = 30_000
+    private xScale: any
+    private yScale: any
 
     // Group Elements
     private rootElement: d3.Selection<any,any,any,any>
@@ -59,6 +60,10 @@ export class StopCascadeVisualiser {
     constructor(sim: Simulation, rootElement: string) {
         this.simulation = sim
         this.rootElement = d3.select('#' + rootElement)
+
+        // Scales
+        this.xScale = d3.scaleLinear().range([0, this.innerChartWidth]).domain([0, this.maxMsWidth])
+        this.yScale = d3.scaleLinear().range([this.innerChartHeight, 0]).domain([this.simulation.getMinPrice(), this.simulation.getMaxPrice()]);
 
         // Root SVG
         this.svg = this.rootElement.append('svg')
@@ -88,7 +93,7 @@ export class StopCascadeVisualiser {
         // Zoom
         this.gClip = this.gAxes.append('g').attr('clip-path', 'url(#clip)')
         this.gZoom = this.gClip.append('g')
-        var zoom = d3.zoom()
+        const zoom = d3.zoom()
             .scaleExtent([1, 1])
             .extent([[0, 0], [this.containerWidth, this.containerHeight]])
             .translateExtent([[0, 0], [Infinity, this.containerHeight]])
@@ -113,6 +118,12 @@ export class StopCascadeVisualiser {
             .attr('width',this.innerBookWidth)
             .attr('height',this.innerBookHeight)
             .attr('fill','none')
+        this.gBook.append('text')
+            .attr('x',0)
+            .attr('y',-5)
+            .style('font-family','Verdana')
+            .style('font-size',14)
+            .text('Book')
 
         // Stops
         this.gStops = this.svg.append('g')
@@ -127,8 +138,6 @@ export class StopCascadeVisualiser {
             .attr('fill','white')
             .on('click',(e: any) => {
                 const rect = e.target.getBoundingClientRect()
-                console.log(rect)
-                console.log(e)
                 const y = e.pageY - (rect.y + window.scrollY)
                 const price = 10*Math.floor(this.yScale.invert(y)/10)
                 this.simulation.addStopOrder({
@@ -136,10 +145,16 @@ export class StopCascadeVisualiser {
                     stopPrice: price
                 })
             })
+        this.gStops.append('text')
+            .attr('x',0)
+            .attr('y',-5)
+            .style('font-family','Verdana')
+            .style('font-size',14)
+            .text('Stops')
     }
 
     private updateOHLC() {
-        let lines = this.gOHLC
+        const lines = this.gOHLC
             .selectAll('line')
             .data(this.simulation.getOHLC())
 
@@ -153,7 +168,7 @@ export class StopCascadeVisualiser {
             .attr('y1',(c: Candle) => this.yScale(c.high))
             .attr('y2',(c: Candle) => this.yScale(c.low))
 
-        let bars = this.gOHLC
+        const bars = this.gOHLC
             .selectAll('rect')
             .data(this.simulation.getOHLC())
 
@@ -179,9 +194,9 @@ export class StopCascadeVisualiser {
         for(const v of [...Array.from(bidDict.values()),...Array.from(askDict.values())]){
             maxVolume = Math.max(maxVolume,v)
         }
-        let bookScale = d3.scaleLinear([0,this.innerBookWidth * 0.95]).domain([0,maxVolume])
+        const bookScale = d3.scaleLinear([0,this.innerBookWidth * 0.95]).domain([0,maxVolume])
 
-        let bids = this.gBook
+        const bids = this.gBook
             .selectAll('.bid')
             .data(Array.from(bidDict.keys()))
         bids.exit().remove()
@@ -195,7 +210,7 @@ export class StopCascadeVisualiser {
             .attr('height',(x: number) => this.yScale(0)-this.yScale(10))
             .attr('width',(x: number) => bookScale(bidDict.get(x)!))
 
-        let asks = this.gBook
+        const asks = this.gBook
             .selectAll('.ask')
             .data(Array.from(askDict.keys()))
         asks.exit().remove()
@@ -212,8 +227,7 @@ export class StopCascadeVisualiser {
 
     updateStops() {
         const inactiveData = this.simulation.getInactiveStops()
-
-        let inactive = this.gStops
+        const inactive = this.gStops
             .selectAll('.inactive')
             .data(inactiveData)
         inactive.exit().remove() // TODO: Animate this somehow
@@ -225,7 +239,40 @@ export class StopCascadeVisualiser {
             .attr('x',0)
             .attr('y',(x: StopOrder) => this.yScale(x.stopPrice))
             .attr('height',this.yScale(0)-this.yScale(10))
-            .attr('width',this.innerBookWidth)
+            .attr('width',this.innerStopsWidth)
+
+        const activeData = this.simulation.getActivatedStops()
+        const active = this.gStops
+            .selectAll('.active')
+            .data(activeData)
+        active.exit().remove() // TODO: Animate this somehow
+        active.enter()
+            .append('rect')
+            .attr('class','active')
+            .attr('fill','red')
+            .merge(inactive)
+            .attr('x',0)
+            .attr('y',(x: StopOrder) => this.yScale(x.stopPrice))
+            .attr('height',this.yScale(0)-this.yScale(10))
+            .attr('width',this.innerStopsWidth)
+        
+        const lastPrice = this.simulation.getLastPrice()
+        if(lastPrice !== NaN){
+            const last = this.gStops
+                .selectAll('.last')
+                .data([lastPrice])
+            last.exit().remove()
+            last.enter()
+                .append('line')
+                .attr('class','last')
+                .attr('stroke','steelblue')
+                .attr('stroke-width',1)
+                .merge(last)
+                .attr('x1',0)
+                .attr('x2',this.innerStopsWidth)
+                .attr('y1',(x: number) => this.yScale(x))
+                .attr('y2',(x: number) => this.yScale(x))
+        }
     }
 
     update() {

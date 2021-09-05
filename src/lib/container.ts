@@ -24,13 +24,5 @@ export class StopCascadeWebContainer {
             this.visualiser.update()
         },args.tickRate)
         this.visualiser = new StopCascadeVisualiser(this.simulation,args.target)
-
-        // TODO: Remove this
-        for(let i = 0;i < 10;i++){
-            this.simulation.addStopOrder({
-                side: i % 2 === 0 ? Side.Buy : Side.Sell,
-                stopPrice: 10*Math.floor(Math.random()*200)
-            })
-        }
     }
 }

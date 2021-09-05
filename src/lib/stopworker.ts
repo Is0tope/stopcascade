@@ -34,11 +34,13 @@ export class StopWorker {
     private activatedOrders: StopOrder[] = []
     private activationRate: number
     private defaultSize = 8000
+    private hitSound: HTMLAudioElement
 
-    constructor(clock: Clock, book: OrderBook, activationRate: number) {
+    constructor(clock: Clock, book: OrderBook, activationRate: number, audioPath: string) {
         this.clock = clock
         this.book = book
         this.activationRate = activationRate
+        this.hitSound  = new Audio(`${audioPath}/hit.mp3`)
     }
 
     newStopOrder(args: NewStopOrderArgs) {
@@ -82,10 +84,15 @@ export class StopWorker {
                 side: o.side,
                 size: o.size
             })
+            this.hitSound.play()
         }
     }
 
     getInactiveStops(): StopOrder[] {
         return <StopOrder[]>[...this.inactiveBuys.toArray(),...this.inactiveSells.toArray()]
+    }
+
+    getActivatedStops(): StopOrder[] {
+        return this.activatedOrders
     }
 }

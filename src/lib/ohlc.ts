@@ -55,6 +55,11 @@ export class OHLCTracker implements OpenHighLowCloseTracker {
         return this.candles
     }
 
+    getLastPrice(): number {
+        const current = this.getCurrentCandle()
+        return current !== undefined ? current.close : NaN
+    }
+
     tick(time: number) {
         this.rollCandle(this.roundToBucket(time))
     }
