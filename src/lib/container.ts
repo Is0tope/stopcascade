@@ -1,5 +1,4 @@
 import { StepClock } from "./clock";
-import { Side } from "./orderbook";
 import { NewSimulationArgs, Simulation } from "./simulation";
 import { StopCascadeVisualiser } from "./visualiser";
 

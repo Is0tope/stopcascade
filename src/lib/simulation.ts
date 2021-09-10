@@ -1,4 +1,5 @@
 import { Clock, StepClock, UTCClock } from "./clock"
+import { Instrument } from "./instrument"
 import { MarketMaker } from "./marketmaker"
 import { Candle, OHLCTracker } from "./ohlc"
 import { Execution, OrderBook, OrderType } from "./orderbook"
@@ -21,18 +22,8 @@ export interface NewSimulationArgs {
 }
 
 export class Simulation {
-    // Simulation parameters
-    private markPrice: number
-    private stopActivationRate: number
-    private marketMakerOrderSize: number
-    private marketMakerOrderRate: number
-    private marketMakerAggression: number
-    private tickSize: number
-    private maxPrice: number
-    private minPrice: number
-    private candleWidth: number
-
     private clock: Clock
+    private instrument: Instrument
     private book: OrderBook
     private prng: PseudoRandomNumberGenerator
     private marketMaker: MarketMaker
@@ -40,32 +31,28 @@ export class Simulation {
     private stops: StopWorker
 
     constructor(args: NewSimulationArgs) {
-        this.markPrice = args.markPrice || 1000
-        this.stopActivationRate = args.stopActivationRate || 1
-        this.marketMakerOrderSize = args.marketMakerOrderSize || 1000
-        this.marketMakerOrderRate = args.marketMakerOrderRate || 2
-        this.marketMakerAggression = args.marketMakerAggression || 0.01
-        this.tickSize = args.tickSize || 10
-        this.maxPrice = args.maxPrice || 2000
-        this.minPrice = args.minPrice || 0
-        this.candleWidth = args.candleWidth || 1000
-
         this.clock = args.clock === undefined ? new UTCClock() : args.clock
+        this.instrument = new Instrument({
+            markPrice: args.markPrice || 1000,
+            maxPrice:  args.maxPrice || 2000,
+            minPrice:  args.minPrice || 0,
+            tickSize:  args.tickSize || 10
+        })
         this.book = new OrderBook(this.clock)
         this.prng = new AleaPRNG(args.seed || '1337')
         this.marketMaker = new MarketMaker({
             book: this.book,
             prng: this.prng,
-            orderSize: this.marketMakerOrderSize,
-            aggression: this.marketMakerAggression,
-            rate: this.marketMakerOrderRate,
-            markPrice:this.markPrice,
-            maxPrice: this.maxPrice,
-            minPrice: this.minPrice,
-            tickSize: this.tickSize
+            orderSize: args.marketMakerOrderSize || 1000,
+            rate: args.marketMakerOrderRate || 2,
+            instrument: this.instrument
         })
-        this.ohlc = new OHLCTracker(this.clock.getTime(),this.candleWidth,this.markPrice)
-        this.stops = new StopWorker(this.clock,this.book,this.stopActivationRate,args.audioPath || 'audio')
+        this.ohlc = new OHLCTracker({ 
+            time:this.clock.getTime(),
+            bucket: args.candleWidth || 1000,
+            instrument: this.instrument
+        })
+        this.stops = new StopWorker(this.clock,this.book,args.stopActivationRate || 1,args.audioPath || 'audio')
 
         // Subscribe to trades
         this.book.subscribeToTrades((es: Execution[]) => {
@@ -75,7 +62,7 @@ export class Simulation {
             es.forEach((e: Execution) => this.stops.trigger(e.lastPrice))
         })
         this.book.subscribeToTrades((es: Execution[]) => {
-            this.marketMaker.onTrades(es)
+            this.instrument.onTrades(es)
         })
     }
 
@@ -110,19 +97,19 @@ export class Simulation {
     }
 
     getMarkPrice(): number {
-        return this.markPrice
+        return this.instrument.markPrice
     }
 
     getMinPrice(): number {
-        return this.minPrice
+        return this.instrument.minPrice
     }
 
     getMaxPrice(): number {
-        return this.maxPrice
+        return this.instrument.maxPrice
     }
 
     getLastPrice(): number {
-        return this.ohlc.getLastPrice()
+        return this.instrument.lastPrice
     }
 
     getCurrentCandle(): Candle {

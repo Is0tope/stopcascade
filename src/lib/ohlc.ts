@@ -1,4 +1,4 @@
-import { Clock } from "./clock";
+import { Instrument } from './instrument'
 import { Execution } from "./orderbook";
 
 export interface Candle {
@@ -15,14 +15,23 @@ export interface OpenHighLowCloseTracker {
     tick(time: number): any
 }
 
+export interface NewOHLCTrackerArgs {
+    time: number
+    bucket: number
+    instrument: Instrument
+}
+
 export class OHLCTracker implements OpenHighLowCloseTracker {
     private candles: Candle[] = []
     private bucket: number
+    private instrument: Instrument
 
-    constructor(time: number, bucket: number, initialPrice: number){
-        this.bucket = bucket
+    constructor(args: NewOHLCTrackerArgs){
+        this.bucket = args.bucket
+        this.instrument = args.instrument
+        const initialPrice = this.instrument.markPrice
         this.candles.push({
-            timestamp: this.roundToBucket(time),
+            timestamp: this.roundToBucket(args.time),
             open: initialPrice,
             high: initialPrice,
             low: initialPrice,
@@ -53,11 +62,6 @@ export class OHLCTracker implements OpenHighLowCloseTracker {
 
     getCandles(): Candle[] {
         return this.candles
-    }
-
-    getLastPrice(): number {
-        const current = this.getCurrentCandle()
-        return current !== undefined ? current.close : NaN
     }
 
     tick(time: number) {

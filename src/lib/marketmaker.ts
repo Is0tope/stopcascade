@@ -1,3 +1,4 @@
+import { Instrument } from './instrument'
 import { Execution, OrderBook, OrderType, Side } from "./orderbook";
 import { PseudoRandomNumberGenerator } from "./prng";
 import { floorToTick } from "./util";
@@ -5,30 +6,21 @@ import { floorToTick } from "./util";
 export interface NewMarketMakerArgs {
     book: OrderBook
     prng: PseudoRandomNumberGenerator
+    instrument: Instrument
     orderSize: number
-    aggression: number
     rate: number
-    markPrice: number
-    minPrice: number
-    maxPrice: number
-    tickSize: number
 }
 
 export class MarketMaker {
     private book: OrderBook
     private prng: PseudoRandomNumberGenerator
-    private markPrice: number
+    private instrument: Instrument
     private minSize: number
     private maxSize: number
-    private maxAggress: number
     private rate: number
-    private minPrice: number
-    private maxPrice: number
-    private tickSize: number
-    private lastPrice: number
 
     private markPriceFavour = 0.9
-    private distributionAlpha = 8
+    private distributionAlpha = 5
     private distributionBeta = 1.005
 
     constructor(args: NewMarketMakerArgs) {
@@ -36,13 +28,8 @@ export class MarketMaker {
         this.prng = args.prng
         this.maxSize = args.orderSize
         this.minSize = Math.floor(args.orderSize/2)
-        this.maxAggress = args.aggression
         this.rate = args.rate
-        this.markPrice = args.markPrice
-        this.lastPrice = args.markPrice
-        this.minPrice = args.minPrice
-        this.maxPrice = args.maxPrice
-        this.tickSize = args.tickSize
+        this.instrument = args.instrument
     }
 
     tick() {
@@ -51,12 +38,8 @@ export class MarketMaker {
         }
     }
 
-    onTrades(trades: Execution[]) {
-        this.lastPrice = trades[trades.length - 1].lastPrice
-    }
-
     private getRefPrice() {
-        return floorToTick(this.tickSize,(this.markPriceFavour*this.markPrice) + ((1-this.markPriceFavour)*this.lastPrice))
+        return floorToTick(this.instrument.tickSize,(this.markPriceFavour*this.instrument.markPrice) + ((1-this.markPriceFavour)*this.instrument.lastPrice))
     }
 
     private getOrderPrice(side: Side): number{
@@ -65,9 +48,9 @@ export class MarketMaker {
         const aggression = rng - expectation
         const refPrice = this.getRefPrice()
         let price = side === Side.Buy ? refPrice*(1+aggression) : refPrice*(1-aggression)
-        price = floorToTick(this.tickSize,price)
-        price = Math.min(price,this.maxPrice)
-        price = Math.max(price,this.minPrice)
+        price = floorToTick(this.instrument.tickSize,price)
+        price = Math.min(price,this.instrument.maxPrice)
+        price = Math.max(price,this.instrument.minPrice)
         return price
     }
 

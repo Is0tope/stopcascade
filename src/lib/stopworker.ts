@@ -59,6 +59,7 @@ export class StopWorker {
         if(!this.inactiveBuys.isEmpty()){
             let top = <StopOrder>this.inactiveBuys.front()
             while(price >= top.stopPrice){
+                console.log(`Triggering ${Side[top.side]} order at ${top.stopPrice.toLocaleString()}`)
                 this.activatedOrders.push(<StopOrder>this.inactiveBuys.dequeue())
                 if(this.inactiveBuys.isEmpty()) break
                 top = <StopOrder>this.inactiveBuys.front()
@@ -67,6 +68,7 @@ export class StopWorker {
         if(!this.inactiveSells.isEmpty()){
             let top = <StopOrder>this.inactiveSells.front()
             while(price <= top.stopPrice){
+                console.log(`Triggering ${Side[top.side]} order at ${top.stopPrice.toLocaleString()}`)
                 this.activatedOrders.push(<StopOrder>this.inactiveSells.dequeue())
                 if(this.inactiveBuys.isEmpty()) break
                 top = <StopOrder>this.inactiveSells.front()

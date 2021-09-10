@@ -54,12 +54,17 @@ export class StopCascadeVisualiser {
     // Chart
     private gXAxis: any
     private gYAxis: any
-    private xAxis: d3.Axis<d3.NumberValue>
-    private yAxis: d3.Axis<d3.NumberValue>
-    private chartZoom: d3.ZoomBehavior<Element,unknown>
+    private xAxis: any
+    private yAxis: any
+    private chartZoom: any
     private onZoom: Function
     private moveTolerance = 4_000
     private currentZoom: d3.ZoomTransform = d3.zoomIdentity
+    private followChart = true
+
+    // Controls
+    private controlBar: any
+    private followCheckbox: any
 
     constructor(sim: Simulation, rootElement: string) {
         this.simulation = sim
@@ -77,6 +82,7 @@ export class StopCascadeVisualiser {
         this.gAxes = this.svg.append('g')
         this.gAxes.attr('transform', `translate(${this.chartMargin},${this.chartMargin})`)
         this.xAxis = d3.axisBottom(this.xScale)
+            .tickFormat((domainValue: d3.AxisDomain, index: number) => Math.floor(<number>domainValue/1000).toString())
         this.gXAxis = this.gAxes.append('g')
             .attr('transform', `translate(0,${this.innerChartHeight})`)
             .call(this.xAxis);
@@ -97,7 +103,6 @@ export class StopCascadeVisualiser {
         // Zoom
         this.onZoom = (transform: any) => {
             // Only deal with x axis for now
-            console.log(transform)
             this.currentZoom = transform
             this.gZoom.attr('transform', `translate(${transform.x},0)`);
             this.gXAxis.call(this.xAxis.scale(transform.rescaleX(this.xScale)));
@@ -110,8 +115,18 @@ export class StopCascadeVisualiser {
             .translateExtent([[0, 0], [Infinity, this.containerHeight]])
             .on('zoom', (e: any) => {
                 this.onZoom(e.transform)
+            })
+            .on('start',() => {
+                this.followChart = false
             });
-        this.svg.call(this.chartZoom)
+        this.gAxes.append('rect')
+            .attr('x',0)
+            .attr('y',0)
+            .attr('width',this.innerChartWidth)
+            .attr('height',this.innerChartHeight)
+            .attr('fill','transparent')
+            .attr('stroke','transparent')
+            .call(this.chartZoom)
         
         // OHLC
         this.gOHLC = this.gZoom.append('g')
@@ -160,6 +175,14 @@ export class StopCascadeVisualiser {
             .style('font-family','Verdana')
             .style('font-size',14)
             .text('Stops')
+
+        // Controls
+        this.controlBar = this.rootElement.append('div')
+        this.followCheckbox = this.controlBar
+            .append('input')
+            .attr('type','checkbox')
+        this.controlBar.append('span')
+            .text('Follow Chart')
     }
 
     private updateOHLC() {
@@ -196,10 +219,8 @@ export class StopCascadeVisualiser {
         // Check to see if we need to move the chart
         const lastCandleTimestamp = this.simulation.getCurrentCandle().timestamp
         const rightmostTimestamp = <number>this.xAxis.scale().domain()[1]
-        if(lastCandleTimestamp > rightmostTimestamp - this.moveTolerance) {
-            console.log('move tolerance exceeded')
+        if(this.followChart && lastCandleTimestamp > rightmostTimestamp - this.moveTolerance) {
             const transform = this.currentZoom.translate(this.xScale(-1000),0)
-            console.log(transform)
             this.onZoom(transform)
         }
 
@@ -277,22 +298,36 @@ export class StopCascadeVisualiser {
             .attr('width',this.innerStopsWidth)
         
         const lastPrice = this.simulation.getLastPrice()
-        if(lastPrice !== NaN){
-            const last = this.gStops
-                .selectAll('.last')
-                .data([lastPrice])
-            last.exit().remove()
-            last.enter()
-                .append('line')
-                .attr('class','last')
-                .attr('stroke','steelblue')
-                .attr('stroke-width',1)
-                .merge(last)
-                .attr('x1',0)
-                .attr('x2',this.innerStopsWidth)
-                .attr('y1',(x: number) => this.yScale(x))
-                .attr('y2',(x: number) => this.yScale(x))
-        }
+        const last = this.gStops
+            .selectAll('.last')
+            .data([lastPrice])
+        last.exit().remove()
+        last.enter()
+            .append('line')
+            .attr('class','last')
+            .attr('stroke','steelblue')
+            .attr('stroke-width',1)
+            .merge(last)
+            .attr('x1',0)
+            .attr('x2',this.innerStopsWidth)
+            .attr('y1',(x: number) => this.yScale(x))
+            .attr('y2',(x: number) => this.yScale(x))
+
+        const markPrice = this.simulation.getMarkPrice()
+        const mark = this.gStops
+            .selectAll('.mark')
+            .data([markPrice])
+        mark.exit().remove()
+        mark.enter()
+            .append('line')
+            .attr('class','last')
+            .attr('stroke','#8b008b')
+            .attr('stroke-width',2)
+            .merge(mark)
+            .attr('x1',0)
+            .attr('x2',this.innerStopsWidth)
+            .attr('y1',(x: number) => this.yScale(x))
+            .attr('y2',(x: number) => this.yScale(x))
     }
 
     update() {
