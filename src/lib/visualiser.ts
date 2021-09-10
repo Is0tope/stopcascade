@@ -2,7 +2,15 @@ import * as d3 from "d3";
 import { Candle } from "./ohlc";
 import { Side } from "./orderbook";
 import { Simulation } from "./simulation";
-import { StopOrder } from "./stopworker";
+import { StopLevel, StopOrder } from "./stopworker";
+
+interface BookAndStopsProperties{
+    bidDict: Map<number,number>
+    askDict: Map<number,number>
+    stopDict: Map<number,StopLevel>
+    maxVolume: number
+    scale: any
+}
 
 export class StopCascadeVisualiser {
     // Simulation object
@@ -64,12 +72,58 @@ export class StopCascadeVisualiser {
 
     // Controls
     private controlBar: any
-    private followCheckbox: any
+    private startButton: any
+    private resetButton: any
+    private seedStopsButton: any
+    private limitOrderRateInput: any
+    private stopOrderRateInput: any
+    private followChartCheckbox: any
 
     constructor(sim: Simulation, rootElement: string) {
         this.simulation = sim
         this.rootElement = d3.select('#' + rootElement)
 
+        // Controls
+        this.controlBar = this.rootElement.append('div').attr('style','font-family: Verdana, Geneva, Tahoma, sans-serif; width:100%')
+        this.startButton = this.controlBar.append('button').text("Start")
+        this.resetButton = this.controlBar.append('button').text("Reset").attr('style','margin-left:0.4rem')
+        this.seedStopsButton = this.controlBar.append('button').text("Seed Stop Orders").attr('style','margin-left:0.4rem')
+        this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
+        this.controlBar.append('label').text('Limit Order Rate ')
+        this.limitOrderRateInput = this.controlBar.append('input')
+            .attr('type','number')
+            .attr('style','text-align: right')
+            .attr('min',0)
+            .attr('max',1000)
+            .attr('value',this.simulation.getLimitOrderRate())
+        this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
+        this.controlBar.append('label').text('Stop Order Rate ')
+        this.stopOrderRateInput = this.controlBar.append('input')
+            .attr('type','number')
+            .attr('style','text-align: right')
+            .attr('min',0)
+            .attr('max',1000)
+            .attr('value',this.simulation.getStopOrderRate())
+        this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
+        this.followChartCheckbox = this.controlBar.append('input').attr('type','checkbox').property('checked',this.followChart)
+        this.controlBar.append('label').text(' Follow Chart')
+
+        this.limitOrderRateInput.on('input',(e: any) => {
+            const val = e.target.valueAsNumber
+            if(val >= 0) {
+                this.simulation.setLimitOrderRate(val)
+            }
+        })
+        this.stopOrderRateInput.on('input',(e: any) => {
+            const val = e.target.valueAsNumber
+            if(val >= 0) {
+                this.simulation.setStopOrderRate(val)
+            }
+        })
+        this.followChartCheckbox.on('input',(e: any) => {
+            this.followChart = this.followChartCheckbox.property('checked')
+        })
+        
         // Scales
         this.xScale = d3.scaleLinear().range([0, this.innerChartWidth]).domain([0, this.maxMsWidth])
         this.yScale = d3.scaleLinear().range([this.innerChartHeight, 0]).domain([this.simulation.getMinPrice(), this.simulation.getMaxPrice()]);
@@ -175,14 +229,28 @@ export class StopCascadeVisualiser {
             .style('font-family','Verdana')
             .style('font-size',14)
             .text('Stops')
+    }
 
-        // Controls
-        this.controlBar = this.rootElement.append('div')
-        this.followCheckbox = this.controlBar
-            .append('input')
-            .attr('type','checkbox')
-        this.controlBar.append('span')
-            .text('Follow Chart')
+    // Hacky, but don't want to deal with updating these data structures dynamically for demo
+    private getBookProperties(): BookAndStopsProperties {
+        const bidDict = this.simulation.getBidL2()
+        const askDict = this.simulation.getAskL2()
+        const stopDict = this.simulation.getStopLevels()
+        // Figure out the maximum volume to scale
+        const maxVolume = Math.max(...[
+            ...Array.from(bidDict.values()),
+            ...Array.from(askDict.values()),
+            ...Array.from(stopDict.values()).map((sl: StopLevel) => sl.inactive + sl.active)
+        ])
+        const scale = d3.scaleLinear([0,this.innerBookWidth * 0.95]).domain([0,maxVolume])
+
+        return {
+            bidDict,
+            askDict,
+            stopDict,
+            maxVolume,
+            scale
+        }
     }
 
     private updateOHLC() {
@@ -220,26 +288,17 @@ export class StopCascadeVisualiser {
         const lastCandleTimestamp = this.simulation.getCurrentCandle().timestamp
         const rightmostTimestamp = <number>this.xAxis.scale().domain()[1]
         if(this.followChart && lastCandleTimestamp > rightmostTimestamp - this.moveTolerance) {
-            const transform = this.currentZoom.translate(this.xScale(-1000),0)
+            const position = Math.max(0,lastCandleTimestamp + this.moveTolerance - this.maxMsWidth)
+            const transform = new d3.ZoomTransform(1,-this.xScale(position),0)
             this.onZoom(transform)
         }
 
     }
 
-    private updateBook() {
-        const bidDict = this.simulation.getBidL2()
-        const askDict = this.simulation.getAskL2()
-
-        // Figure out the maximum volume to scale
-        let maxVolume = 1
-        for(const v of [...Array.from(bidDict.values()),...Array.from(askDict.values())]){
-            maxVolume = Math.max(maxVolume,v)
-        }
-        const bookScale = d3.scaleLinear([0,this.innerBookWidth * 0.95]).domain([0,maxVolume])
-
+    private updateBook(props: BookAndStopsProperties) {
         const bids = this.gBook
             .selectAll('.bid')
-            .data(Array.from(bidDict.keys()))
+            .data(Array.from(props.bidDict.keys()))
         bids.exit().remove()
         bids.enter()
             .append('rect')
@@ -249,11 +308,11 @@ export class StopCascadeVisualiser {
             .attr('x',0)
             .attr('y',(x: number) => this.yScale(x))
             .attr('height',(x: number) => this.yScale(0)-this.yScale(10))
-            .attr('width',(x: number) => bookScale(bidDict.get(x)!))
+            .attr('width',(x: number) => props.scale(props.bidDict.get(x)!))
 
         const asks = this.gBook
             .selectAll('.ask')
-            .data(Array.from(askDict.keys()))
+            .data(Array.from(props.askDict.keys()))
         asks.exit().remove()
         asks.enter()
             .append('rect')
@@ -263,39 +322,42 @@ export class StopCascadeVisualiser {
             .attr('x',0)
             .attr('y',(x: number) => this.yScale(x))
             .attr('height',(x: number) => this.yScale(0)-this.yScale(10))
-            .attr('width',(x: number) => bookScale(askDict.get(x)!))
+            .attr('width',(x: number) => props.scale(props.askDict.get(x)!))
     }
 
-    updateStops() {
-        const inactiveData = this.simulation.getInactiveStops()
+    updateStops(props: BookAndStopsProperties) {
+        const stopLevels = this.simulation.getStopLevels()
+        const prices = Array.from(stopLevels.keys())
+
         const inactive = this.gStops
             .selectAll('.inactive')
-            .data(inactiveData)
-        inactive.exit().remove() // TODO: Animate this somehow
+            .data(prices)
+        inactive.exit().remove()
         inactive.enter()
             .append('rect')
             .attr('class','inactive')
             .attr('fill','black')
             .merge(inactive)
-            .attr('x',0)
-            .attr('y',(x: StopOrder) => this.yScale(x.stopPrice))
+            .attr('x',props.scale(0))
+            .attr('y',(x: number) => this.yScale(x))
             .attr('height',this.yScale(0)-this.yScale(10))
-            .attr('width',this.innerStopsWidth)
+            .attr('width',(x: number) => props.scale(stopLevels.get(x)!.inactive))
+            .attr("pointer-events", "none")
 
-        const activeData = this.simulation.getActivatedStops()
         const active = this.gStops
             .selectAll('.active')
-            .data(activeData)
-        active.exit().remove() // TODO: Animate this somehow
+            .data(prices)
+        active.exit().remove()
         active.enter()
             .append('rect')
             .attr('class','active')
             .attr('fill','red')
-            .merge(inactive)
-            .attr('x',0)
-            .attr('y',(x: StopOrder) => this.yScale(x.stopPrice))
+            .merge(active)
+            .attr('x',(x: number) => props.scale(stopLevels.get(x)!.inactive))
+            .attr('y',(x: number) => this.yScale(x))
             .attr('height',this.yScale(0)-this.yScale(10))
-            .attr('width',this.innerStopsWidth)
+            .attr('width',(x: number) => props.scale(stopLevels.get(x)!.active))
+            .attr("pointer-events", "none")
         
         const lastPrice = this.simulation.getLastPrice()
         const last = this.gStops
@@ -332,7 +394,8 @@ export class StopCascadeVisualiser {
 
     update() {
         this.updateOHLC()
-        this.updateBook()
-        this.updateStops()
+        const bookProps = this.getBookProperties()
+        this.updateBook(bookProps)
+        this.updateStops(bookProps)
     }
 }
