@@ -5,13 +5,16 @@ export interface PseudoRandomNumberGenerator {
     normal(mean: number, variance: number): number
     gamma(alpha: number, rate: number): number
     beta(alpha: number, beta: number): number
+    reset(): void
 }
 
-export class AleaPRNG implements PseudoRandomNumberGenerator{
-    private prng
+export class AleaPRNG{
+    private prng: any
+    private seed: string
 
     constructor(seed: string) {
-        this.prng = Alea(seed)
+        this.seed = seed
+        this.prng = Alea(this.seed)
     }
 
     random(): number {
@@ -99,5 +102,9 @@ export class AleaPRNG implements PseudoRandomNumberGenerator{
         var g1 = this.gamma(alpha, 1)
         var g2 = this.gamma(beta, 1)
         return g1/(g1+g2)
+    }
+
+    reset() {
+        this.prng = Alea(this.seed)
     }
 }

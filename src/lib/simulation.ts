@@ -2,14 +2,14 @@ import { Clock, StepClock, UTCClock } from "./clock"
 import { Instrument } from "./instrument"
 import { MarketMaker } from "./marketmaker"
 import { Candle, OHLCTracker } from "./ohlc"
-import { Execution, OrderBook, OrderType } from "./orderbook"
+import { Execution, OrderBook, OrderType, Side } from "./orderbook"
 import { AleaPRNG, PseudoRandomNumberGenerator } from "./prng"
 import { NewStopOrderArgs, StopLevel, StopOrder, StopWorker } from "./stopworker"
+import { floorToTick } from './util'
 
 export interface NewSimulationArgs {
     seed?: string
     candleWidth?: number
-    clock?: Clock
     stopActivationRate?: number
     marketMakerOrderSize?: number
     marketMakerOrderRate?: number
@@ -19,6 +19,8 @@ export interface NewSimulationArgs {
     maxPrice?: number
     minPrice?: number
     audioPath?: string
+    playing?: boolean
+    tickRate?: number
 }
 
 export class Simulation {
@@ -29,9 +31,10 @@ export class Simulation {
     private marketMaker: MarketMaker
     private ohlc: OHLCTracker
     private stops: StopWorker
+    private playing: boolean
 
     constructor(args: NewSimulationArgs) {
-        this.clock = args.clock === undefined ? new UTCClock() : args.clock
+        this.clock = new StepClock(0,args.tickRate || 100)
         this.instrument = new Instrument({
             markPrice: args.markPrice || 1000,
             maxPrice:  args.maxPrice || 2000,
@@ -65,12 +68,17 @@ export class Simulation {
         this.book.subscribeToTrades((es: Execution[]) => {
             this.instrument.onTrades(es)
         })
+
+        this.playing = args.playing || false
     }
 
     tick() {
-        this.marketMaker.tick()
-        this.stops.activate()
-        this.ohlc.tick(this.clock.getTime())
+        if(this.playing){
+            this.clock.tick()
+            this.marketMaker.tick()
+            this.stops.activate()
+            this.ohlc.tick(this.clock.getTime())
+        }
     }
 
     getOHLC(): Candle[] {
@@ -127,5 +135,43 @@ export class Simulation {
     
     setStopOrderRate(rate: number) {
         this.stops.activationRate = rate
+    }
+
+    isPlaying(): boolean {
+        return this .playing
+    }
+
+    start() {
+        this.playing = true
+    }
+
+    stop() {
+        this.playing = false
+    }
+
+    seedStopOrders(n: number) {
+        for(let i = 0;i < n;i++){
+            const rand = this.prng.random()
+            const buy = floorToTick(this.instrument.tickSize,this.instrument.markPrice + rand * (this.instrument.maxPrice - this.instrument.markPrice))
+            const sell = floorToTick(this.instrument.tickSize,rand * (this.instrument.markPrice - this.instrument.minPrice))
+            this.stops.newStopOrder({
+                side: Side.Buy,
+                stopPrice: buy
+            })
+            this.stops.newStopOrder({
+                side: Side.Sell,
+                stopPrice: sell
+            })
+        }
+    }
+
+    reset() {
+        this.clock.reset()
+        this.prng.reset()
+        this.instrument.reset()
+        this.ohlc.reset()
+        this.book.reset()
+        this.stops.reset()
+        this.marketMaker.reset()
     }
 }

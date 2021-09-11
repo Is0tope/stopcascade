@@ -75,6 +75,10 @@ export class MarketMaker {
         })
     }
 
+    reset() {
+        this.nextPlaceTime = this.clock.getTime()
+    }
+
     public get rate(): number {
         return this._rate
     }

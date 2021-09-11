@@ -47,4 +47,8 @@ export class Instrument {
             this._lastPrice = es[es.length - 1].lastPrice
         }
     }
+
+    reset(){
+        this._lastPrice = this.markPrice
+    }
 }

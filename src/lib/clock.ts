@@ -2,6 +2,7 @@ export interface Clock {
     getTime(): number
     set(time: number): void
     tick(): void
+    reset(): void
 }
 
 export class UTCClock implements Clock {
@@ -14,14 +15,19 @@ export class UTCClock implements Clock {
     tick() {
         return
     }
+    reset() {
+        return
+    }
 }
 
 export class StepClock implements Clock {
+    private initial: number
     private current: number
     private step: number
 
     constructor(initial: number, step: number){
         this.step = step
+        this.initial = initial
         this.current = initial
     }
 
@@ -35,5 +41,9 @@ export class StepClock implements Clock {
 
     set(time: number) {
         this.current = time
+    }
+
+    reset() {
+        this.current = this.initial
     }
 }

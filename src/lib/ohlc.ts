@@ -25,18 +25,13 @@ export class OHLCTracker implements OpenHighLowCloseTracker {
     private candles: Candle[] = []
     private bucket: number
     private instrument: Instrument
+    private initialTime: number
 
     constructor(args: NewOHLCTrackerArgs){
         this.bucket = args.bucket
         this.instrument = args.instrument
-        const initialPrice = this.instrument.markPrice
-        this.candles.push({
-            timestamp: this.roundToBucket(args.time),
-            open: initialPrice,
-            high: initialPrice,
-            low: initialPrice,
-            close: initialPrice
-        })
+        this.initialTime = args.time
+        this.reset()
     }
 
     private roundToBucket(time: number){
@@ -85,5 +80,17 @@ export class OHLCTracker implements OpenHighLowCloseTracker {
         for(const c of this.getCandles()){
             console.log(`time: ${c.timestamp} O: ${c.open} H: ${c.high} L: ${c.low} C: ${c.close}`)
         }
+    }
+
+    reset() {
+        this.candles = []
+        const initialPrice = this.instrument.markPrice
+        this.candles.push({
+            timestamp: this.roundToBucket(this.initialTime),
+            open: initialPrice,
+            high: initialPrice,
+            low: initialPrice,
+            close: initialPrice
+        })
     }
 }

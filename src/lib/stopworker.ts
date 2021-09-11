@@ -130,6 +130,14 @@ export class StopWorker {
         }
         return dict
     }
+    
+    reset() {
+        this._id = 0
+        this.lastActivationTime = this.clock.getTime()
+        this.inactiveBuys.clear()
+        this.inactiveSells.clear()
+        this.activatedOrders = []
+    }
 
     public get activationRate(): number {
         return this._activationRate

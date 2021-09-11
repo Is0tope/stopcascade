@@ -8,17 +8,13 @@ export interface NewStopCascadeWebContainerArgs extends NewSimulationArgs {
 }
 
 export class StopCascadeWebContainer {
-    private clock: StepClock
     private simulation: Simulation
     private visualiser: StopCascadeVisualiser
     private timer: any
 
     constructor(args: NewStopCascadeWebContainerArgs) {
-        this.clock = new StepClock(0,args.tickRate)
-        args.clock = this.clock
         this.simulation = new Simulation(args)
         this.timer = setInterval(() => {
-            this.clock.tick()
             this.simulation.tick()
             this.visualiser.update()
         },args.tickRate)

@@ -180,4 +180,10 @@ export class OrderBook {
     subscribeToTrades(fn: (es: Execution[]) => void) {
         this.tradeSubscribers.push(fn)
     }
+
+    reset() {
+        this._id = 0
+        this.bids.clear()
+        this.asks.clear()
+    }
 }

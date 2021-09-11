@@ -85,7 +85,7 @@ export class StopCascadeVisualiser {
 
         // Controls
         this.controlBar = this.rootElement.append('div').attr('style','font-family: Verdana, Geneva, Tahoma, sans-serif; width:100%')
-        this.startButton = this.controlBar.append('button').text("Start")
+        this.startButton = this.controlBar.append('button').text('Start')
         this.resetButton = this.controlBar.append('button').text("Reset").attr('style','margin-left:0.4rem')
         this.seedStopsButton = this.controlBar.append('button').text("Seed Stop Orders").attr('style','margin-left:0.4rem')
         this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
@@ -105,7 +105,7 @@ export class StopCascadeVisualiser {
             .attr('max',1000)
             .attr('value',this.simulation.getStopOrderRate())
         this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
-        this.followChartCheckbox = this.controlBar.append('input').attr('type','checkbox').property('checked',this.followChart)
+        this.followChartCheckbox = this.controlBar.append('input').attr('type','checkbox')
         this.controlBar.append('label').text(' Follow Chart')
 
         this.limitOrderRateInput.on('input',(e: any) => {
@@ -121,9 +121,18 @@ export class StopCascadeVisualiser {
             }
         })
         this.followChartCheckbox.on('input',(e: any) => {
-            this.followChart = this.followChartCheckbox.property('checked')
+            this.followChart = !this.followChart
         })
-        
+        this.startButton.on('click',(e: any) => {
+            this.simulation.isPlaying() ? this.simulation.stop() : this.simulation.start()
+        })
+        this.resetButton.on('click',(e: any) => {
+            this.simulation.reset()
+            this.onZoom(d3.zoomIdentity)
+        })
+        this.seedStopsButton.on('click',(e: any) => {
+            this.simulation.seedStopOrders(5)
+        })
         // Scales
         this.xScale = d3.scaleLinear().range([0, this.innerChartWidth]).domain([0, this.maxMsWidth])
         this.yScale = d3.scaleLinear().range([this.innerChartHeight, 0]).domain([this.simulation.getMinPrice(), this.simulation.getMaxPrice()]);
@@ -257,7 +266,7 @@ export class StopCascadeVisualiser {
         const lines = this.gOHLC
             .selectAll('line')
             .data(this.simulation.getOHLC())
-
+        lines.exit().remove()
         lines.enter()
             .append('line')
             .attr('stroke', 'black')
@@ -271,7 +280,7 @@ export class StopCascadeVisualiser {
         const bars = this.gOHLC
             .selectAll('rect')
             .data(this.simulation.getOHLC())
-
+        bars.exit().remove()
         bars.enter()
             .append('rect')
             .attr('stroke', 'black')
@@ -392,10 +401,16 @@ export class StopCascadeVisualiser {
             .attr('y2',(x: number) => this.yScale(x))
     }
 
+    updateUI() {
+        this.followChartCheckbox.property('checked',this.followChart)
+        this.startButton.text(this.simulation.isPlaying() ? 'Stop' : 'Start')
+    }
+
     update() {
         this.updateOHLC()
         const bookProps = this.getBookProperties()
         this.updateBook(bookProps)
         this.updateStops(bookProps)
+        this.updateUI()
     }
 }
