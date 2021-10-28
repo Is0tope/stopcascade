@@ -137,6 +137,10 @@ export class Simulation {
         this.stops.activationRate = rate
     }
 
+    getCandleWidth(): number {
+        return this.ohlc.getCandleWidth()
+    }
+
     isPlaying(): boolean {
         return this .playing
     }

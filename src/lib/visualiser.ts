@@ -26,6 +26,8 @@ export class StopCascadeVisualiser {
     private chartHeight = 600
     private innerChartWidth = this.chartWidth - 2 * this.chartMargin
     private innerChartHeight = this.chartHeight - 2 * this.chartMargin
+    private numCandlesOnChart = 30
+    private candleScaling = 0.8
     private candleWidth = 800
 
     // Book Dimensions
@@ -66,7 +68,7 @@ export class StopCascadeVisualiser {
     private yAxis: any
     private chartZoom: any
     private onZoom: Function
-    private moveTolerance = 4_000
+    private moveTolerance = 4 // candle count
     private currentZoom: d3.ZoomTransform = d3.zoomIdentity
     private followChart = true
 
@@ -83,6 +85,10 @@ export class StopCascadeVisualiser {
         this.simulation = sim
         this.rootElement = d3.select('#' + rootElement)
 
+        // Calculate chart width
+        this.maxMsWidth = this.simulation.getCandleWidth() * this.numCandlesOnChart
+        this.candleWidth = this.simulation.getCandleWidth() * this.candleScaling
+    
         // Controls
         this.controlBar = this.rootElement.append('div').attr('style','font-family: Verdana, Geneva, Tahoma, sans-serif; width:100%')
         this.startButton = this.controlBar.append('button').text('Start')
@@ -296,8 +302,9 @@ export class StopCascadeVisualiser {
         // Check to see if we need to move the chart
         const lastCandleTimestamp = this.simulation.getCurrentCandle().timestamp
         const rightmostTimestamp = <number>this.xAxis.scale().domain()[1]
-        if(this.followChart && lastCandleTimestamp > rightmostTimestamp - this.moveTolerance) {
-            const position = Math.max(0,lastCandleTimestamp + this.moveTolerance - this.maxMsWidth)
+        const tol = this.moveTolerance * this.simulation.getCandleWidth()
+        if(this.followChart && lastCandleTimestamp > rightmostTimestamp - tol) {
+            const position = Math.max(0,lastCandleTimestamp + tol - this.maxMsWidth)
             const transform = new d3.ZoomTransform(1,-this.xScale(position),0)
             this.onZoom(transform)
         }

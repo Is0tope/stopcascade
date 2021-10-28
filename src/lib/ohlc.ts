@@ -93,4 +93,8 @@ export class OHLCTracker implements OpenHighLowCloseTracker {
             close: initialPrice
         })
     }
+
+    getCandleWidth(): number {
+        return this.bucket
+    }
 }
