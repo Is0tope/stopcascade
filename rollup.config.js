@@ -21,7 +21,8 @@ export default {
         copy({
           targets: [{
             src: 'static/*', dest: 'dist/'
-          }]
+          }],
+          verbose: true
         })
     ]
   };
