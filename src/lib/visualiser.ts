@@ -71,6 +71,7 @@ export class StopCascadeVisualiser {
     private moveTolerance = 4 // candle count
     private currentZoom: d3.ZoomTransform = d3.zoomIdentity
     private followChart = true
+    private starterText: any
 
     // Controls
     private controlBar: any
@@ -80,6 +81,11 @@ export class StopCascadeVisualiser {
     private limitOrderRateInput: any
     private stopOrderRateInput: any
     private followChartCheckbox: any
+    private marketOrderBuyButton: any
+    private marketOrderSellButton: any
+
+    // Misc
+    private marketOrderSize = 10_000
 
     constructor(sim: Simulation, rootElement: string) {
         this.simulation = sim
@@ -94,6 +100,12 @@ export class StopCascadeVisualiser {
         this.startButton = this.controlBar.append('button').text('Start')
         this.resetButton = this.controlBar.append('button').text("Reset").attr('style','margin-left:0.4rem')
         this.seedStopsButton = this.controlBar.append('button').text("Seed Stop Orders").attr('style','margin-left:0.4rem')
+        this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
+        this.controlBar.append('label').text('Market Order')
+        this.marketOrderBuyButton = this.controlBar.append('button').text('Buy')
+            .attr('style','margin-left:0.4rem;background-color:#4aa163')
+        this.marketOrderSellButton = this.controlBar.append('button').text('Sell')
+            .attr('style','margin-left:0.4rem;background-color:#d16547')
         this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
         this.controlBar.append('label').text('Limit Order Rate ')
         this.limitOrderRateInput = this.controlBar.append('input')
@@ -139,6 +151,13 @@ export class StopCascadeVisualiser {
         this.seedStopsButton.on('click',(e: any) => {
             this.simulation.seedStopOrders(5)
         })
+        this.marketOrderBuyButton.on('click',(e: any) => {
+            this.simulation.newMarketOrder(Side.Buy,this.marketOrderSize)
+        })
+        this.marketOrderSellButton.on('click',(e: any) => {
+            this.simulation.newMarketOrder(Side.Sell,this.marketOrderSize)
+        })
+
         // Scales
         this.xScale = d3.scaleLinear().range([0, this.innerChartWidth]).domain([0, this.maxMsWidth])
         this.yScale = d3.scaleLinear().range([this.innerChartHeight, 0]).domain([this.simulation.getMinPrice(), this.simulation.getMaxPrice()]);
@@ -168,6 +187,18 @@ export class StopCascadeVisualiser {
             .attr('height', this.innerChartHeight)
             .attr('x', 0)
             .attr('y', 0)
+
+        // Start message
+        this.starterText = this.gAxes
+            .append('text')
+            .text('Click the start button to start the simulation')
+            .style('font-size',20)
+            .style('text-anchor','middle')
+            .style('dominant-baseline','middle')
+            .style('fill','#cccccc')
+            .attr('x',this.innerChartWidth/2)
+            .attr('y',this.innerChartHeight/2)
+            .attr('visibility','visible')
 
         // Zoom
         this.onZoom = (transform: any) => {
@@ -413,7 +444,12 @@ export class StopCascadeVisualiser {
         this.startButton.text(this.simulation.isPlaying() ? 'Stop' : 'Start')
     }
 
+    updateStartMessage() {
+        this.starterText.attr('visibility',() => !this.simulation.isPlaying() && this.simulation.getTime() === 0 ? 'visible' : 'hidden')
+    }
+
     update() {
+        this.updateStartMessage()
         this.updateOHLC()
         const bookProps = this.getBookProperties()
         this.updateBook(bookProps)

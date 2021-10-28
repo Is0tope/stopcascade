@@ -1,0 +1,40 @@
+<html>
+    <head>
+        <title>Stop Cascade Simulation</title>
+        <script src="bundle.js"></script>
+        <style>
+            li:not(:last-child) {
+                margin-bottom: 8px;
+            }
+        </style>
+        <link rel="icon" href="/favicon.ico" type="image/x-icon">
+    </head>
+    <body style="text-align: center;font-family: Verdana, Geneva, Tahoma, sans-serif;">
+        <div class="header">
+        <h1>Stop Cascade Simulator</h1>
+        <div id="target"></div>
+        <div style="width:70%;margin: 0 auto;text-align: left">
+            <h2 style="text-align: center">Instructions</h2>
+            <p>This application simulates an exchange with participants quoting around a central price of $1,000. The market maker will place limit orders 
+                which also have a probability of crossing the spread and trading. Stop orders can be placed at any price level either on the buy
+                or sell side. These will be triggered when the last price cross their stop price, and will execute as market orders. Try and create a stop
+                cascade by placing a series of stop orders so that they trigger each other.</p>
+            <ol>
+                <li>Use the start/stop/reset buttons to control the simulation.</li>
+                <li>The <strong>candlestick chart</strong> shows 5s candlesticks of trade activity.</li>
+                <li>The <strong>order book</strong> shows the level 2 distribution of liquidity.</li>
+                <li>The <strong>stops section</strong> shows the distribution of stop orders. <strong>black</strong> indicates an untriggered stop order, 
+                    <strong style="color:red">red</strong> indicates a triggered stop order that is waiting to go into the book.</li>
+                <li>Click on the stops section to place stop orders.</li>
+                <li>Click on the buy/sell market order buttons to place a large market order.</li>
+                <li><strong>Limit Order Rate</strong> controls the rate at which limit orders are placed into the book by the market maker.</li>
+                <li><strong>Stop Order Rate</strong> controls the rate at which stop orders are activated and placed into the book once they are triggered.</li>
+                    
+            </ol>
+            For more information <a href="https://machow.ski/posts/scamwicks-and-stop-cascades/">read the blog post</a> or <a href="https://github.com/Is0tope/stopcascade">check out the source code</a>.
+        </div>
+    </body>
+    <script lang="js">
+        var cascade = new StopCascadeWebContainer({ target: 'target', tickRate: 100, candleWidth: 5000, seed: Math.random().toString()})
+    </script>
+</html>

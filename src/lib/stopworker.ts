@@ -37,7 +37,7 @@ export class StopWorker {
     private inactiveSells = new MaxPriorityQueue({ compare: stopOrderComparator})
     private activatedOrders: StopOrder[] = []
     private _activationRate: number
-    private defaultSize = 4000
+    private defaultSize = 8_000
     private hitSound: HTMLAudioElement
     private lastActivationTime: number
 

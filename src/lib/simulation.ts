@@ -169,6 +169,18 @@ export class Simulation {
         }
     }
 
+    newMarketOrder(side: Side, qty: number) {
+        this.book.newOrder({
+            ordType: OrderType.Market,
+            side: side,
+            size: qty
+        })
+    }
+
+    getTime(): number {
+        return this.clock.getTime()
+    }
+
     reset() {
         this.clock.reset()
         this.prng.reset()
