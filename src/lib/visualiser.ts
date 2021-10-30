@@ -98,7 +98,7 @@ export class StopCascadeVisualiser {
         // Controls
         this.controlBar = this.rootElement.append('div')
             .style('width','100%')
-            .style('line-height','1')
+            .style('line-height','2')
         this.startButton = this.controlBar.append('button').text('Start')
             .attr('class','btn btn-primary btn-sm')
         this.resetButton = this.controlBar.append('button').text("Reset")
