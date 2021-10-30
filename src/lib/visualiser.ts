@@ -96,23 +96,25 @@ export class StopCascadeVisualiser {
         this.candleWidth = this.simulation.getCandleWidth() * this.candleScaling
     
         // Controls
-        this.controlBar = this.rootElement.append('div').attr('style','font-family: Verdana, Geneva, Tahoma, sans-serif; width:100%')
+        this.controlBar = this.rootElement.append('div')
+            .style('width','100%')
+            .style('line-height','1')
         this.startButton = this.controlBar.append('button').text('Start')
-            // .attr('class','btn btn-primary')
+            .attr('class','btn btn-primary btn-sm')
         this.resetButton = this.controlBar.append('button').text("Reset")
             .attr('style','margin-left:0.4rem')
-            // .attr('class','btn btn-secondary')
+            .attr('class','btn btn-secondary btn-sm')
         this.seedStopsButton = this.controlBar.append('button').text("Seed Stop Orders")
             .attr('style','margin-left:0.4rem')
-            // .attr('class','btn btn-secondary')
+            .attr('class','btn btn-secondary btn-sm')
         this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
         this.controlBar.append('label').text('Market Order')
         this.marketOrderBuyButton = this.controlBar.append('button').text('Buy')
             .attr('style','margin-left:0.4rem;background-color:#4aa163')
-            // .attr('class','btn btn-success')
+            .attr('class','btn btn-success btn-sm')
         this.marketOrderSellButton = this.controlBar.append('button').text('Sell')
             .attr('style','margin-left:0.4rem;background-color:#d16547')
-            // .attr('class','btn btn-danger')
+            .attr('class','btn btn-danger btn-sm')
         this.controlBar.append('span').attr('style','color:#cccccc').text(' | ')
         this.controlBar.append('label').text('Limit Order Rate ')
         this.limitOrderRateInput = this.controlBar.append('input')
@@ -174,11 +176,9 @@ export class StopCascadeVisualiser {
         // Root SVG
         this.svg = this.rootElement.append('svg')
         this.svg
-            .attr('width',this.containerWidth)
-            .attr('height',this.containerHeight)
-            .attr('viewbox',`0 0 ${this.containerWidth} ${this.containerHeight}`)
-            .style('display','block')
-            .style('margin','0 auto')
+            .attr('viewBox',`0 0 ${this.containerWidth} ${this.containerHeight}`)
+            .attr('preserveAspectRatio','xMidYMid')
+            .style('max-height','80vh')
 
         // Chart axes
         this.gAxes = this.svg.append('g')
