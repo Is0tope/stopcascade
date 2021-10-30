@@ -173,7 +173,12 @@ export class StopCascadeVisualiser {
 
         // Root SVG
         this.svg = this.rootElement.append('svg')
-        this.svg.attr('width',this.containerWidth).attr('height',this.containerHeight).attr('viewbox',`0 0 ${this.containerWidth} ${this.containerHeight}`)
+        this.svg
+            .attr('width',this.containerWidth)
+            .attr('height',this.containerHeight)
+            .attr('viewbox',`0 0 ${this.containerWidth} ${this.containerHeight}`)
+            .style('display','block')
+            .style('margin','0 auto')
 
         // Chart axes
         this.gAxes = this.svg.append('g')
