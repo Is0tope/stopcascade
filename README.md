@@ -1,7 +1,7 @@
 # stopcascade
 
 This TypeScript application creates a web based simulation of how stop cascades can cause large price movements/wicks.
- 
+
 The simulation contains the following components:
 
 - A time/price priority order book supporting both limit and market orders
@@ -9,7 +9,7 @@ The simulation contains the following components:
 - A simple market maker that quotes both bid and ask according to a Beta distribution
 - Visualiser written in d3.js that displays the simulation in an SVG element and allows interactivity
 
-For more information, please read the [associated blog post](/posts/scamwicks-and-stop-cascades/).
+For more information, please read the [associated blog post](https://machow.ski/posts/scamwicks-and-stop-cascades/).
 ## Building / Running
 To build:
 
