@@ -275,8 +275,8 @@ export class StopCascadeVisualiser {
             .attr('height',this.innerStopsHeight)
             .attr('fill','white')
             .on('click',(e: any) => {
-                const rect = e.target.getBoundingClientRect()
-                const y = e.pageY - (rect.y + window.scrollY)
+                const pt = d3.pointer(e)
+                const y = pt[1]
                 const price = 10*Math.floor(this.yScale.invert(y)/10)
                 this.simulation.addStopOrder({
                     side: price < this.simulation.getMarkPrice() ? Side.Sell : Side.Buy,
