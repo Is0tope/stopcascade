@@ -9,6 +9,8 @@ The simulation contains the following components:
 - A simple market maker that quotes both bid and ask according to a Beta distribution
 - Visualiser written in d3.js that displays the simulation in an SVG element and allows interactivity
 
+This code is a demo. It does not have tests, and it is definitely **not for use in production**.
+
 For more information, please read the [associated blog post](https://machow.ski/posts/scamwicks-and-stop-cascades/).
 ## Building / Running
 To build:
