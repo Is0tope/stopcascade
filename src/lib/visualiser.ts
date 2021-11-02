@@ -3,6 +3,7 @@ import { Candle } from "./ohlc";
 import { Side } from "./orderbook";
 import { Simulation } from "./simulation";
 import { StopLevel, StopOrder } from "./stopworker";
+import { floorToTick } from './util'
 
 interface BookAndStopsProperties{
     bidDict: Map<number,number>
@@ -72,6 +73,7 @@ export class StopCascadeVisualiser {
     private currentZoom: d3.ZoomTransform = d3.zoomIdentity
     private followChart = true
     private starterText: any
+    private stopsStarterText: any
 
     // Controls
     private controlBar: any
@@ -279,7 +281,7 @@ export class StopCascadeVisualiser {
             .on('click',(e: any) => {
                 const pt = d3.pointer(e)
                 const y = pt[1]
-                const price = 10*Math.floor(this.yScale.invert(y)/10)
+                const price = floorToTick(this.simulation.getInstrument().tickSize,this.yScale.invert(y))
                 this.simulation.addStopOrder({
                     side: price < this.simulation.getMarkPrice() ? Side.Sell : Side.Buy,
                     stopPrice: price
@@ -291,6 +293,32 @@ export class StopCascadeVisualiser {
             .style('font-family','Verdana')
             .style('font-size',14)
             .text('Stops')
+
+        const stopStartTextSize = 14
+        this.stopsStarterText = this.gStops
+            .append('text')
+            .style('font-size',stopStartTextSize)
+            .style('text-anchor','middle')
+            .style('dominant-baseline','middle')
+            .style('pointer-events','none')
+            .style('fill','#cccccc')
+            .attr('x',this.innerStopsWidth/2)
+            .attr('y',this.innerStopsHeight * 0.55)
+            .attr('visibility','visible')
+        this.stopsStarterText
+            .append('tspan')
+            .attr('x',this.innerStopsWidth/2)
+            .text('Click here')
+        this.stopsStarterText
+            .append('tspan')
+            .attr('dy',stopStartTextSize)
+            .attr('x',this.innerStopsWidth/2)
+            .text('to')
+        this.stopsStarterText
+            .append('tspan')
+            .attr('dy',stopStartTextSize)
+            .attr('x',this.innerStopsWidth/2)
+            .text('place stops')
     }
 
     // Hacky, but don't want to deal with updating these data structures dynamically for demo
@@ -462,6 +490,7 @@ export class StopCascadeVisualiser {
 
     updateStartMessage() {
         this.starterText.attr('visibility',() => !this.simulation.isPlaying() && this.simulation.getTime() === 0 ? 'visible' : 'hidden')
+        this.stopsStarterText.attr('visibility',() => !this.simulation.isPlaying() && this.simulation.getTime() === 0 ? 'visible' : 'hidden')
     }
 
     update() {

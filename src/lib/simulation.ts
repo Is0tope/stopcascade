@@ -181,6 +181,10 @@ export class Simulation {
         return this.clock.getTime()
     }
 
+    getInstrument(): Instrument {
+        return this.instrument
+    }
+
     reset() {
         this.clock.reset()
         this.prng.reset()
